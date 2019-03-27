@@ -15,7 +15,7 @@ def exit_handler():
 atexit.register(exit_handler)
 
 
-TCP_IP = '169.254.233.198'  #'169.254.233.198' #'127.0.0.1'
+TCP_IP = '10.42.0.203' #'169.254.233.198'  #'169.254.233.198' #'127.0.0.1' 
 TCP_PORT = 1001
 BUFFER_SIZE = 65536
 
