@@ -87,19 +87,30 @@ def start_measuring(event):
 	global SocketCreated
 	global Force
 
-	if FileOpened:
-		print("Starting connection")
-		if (SocketCreated == False):
-			create_socket()
-		socket_created = True
-		decode_rpIP_addr()
-		connect_to_rp()
-		send_set_configuration()
-		send_measure_request()
-		continuous_measurement()
-	else:
+	if not FileOpened:
 		print("No file opened for data storing!")
-	
+		create_new_file()
+
+	print("Starting connection")
+	if (SocketCreated == False):
+		create_socket()
+	socket_created = True
+	decode_rpIP_addr()
+	connect_to_rp()
+	send_set_configuration()
+	send_measure_request()
+	continuous_measurement()
+		
+
+def create_new_file():
+	global FileOpened
+	global UseFile
+	print("Creating new file: formatted %Y%m%d-%H%M%S")
+	filename = time.strftime("%Y%m%d-%H%M%S")
+	print("filename: "+ filename+".bin")
+	UseFile= open(filename+".bin","w+")
+	FileOpened = True
+
 
 def create_socket():
 	global s 
@@ -218,7 +229,7 @@ Label(root, text="RP IP Address:").grid(row=2, sticky=W, padx=4)
 IPEntry = Entry(root)
 IPEntry.grid(row=2,column=1, sticky=E,pady=4)
 IPEntry.delete(0,END)
-IPEntry.insert(0, "10.42.0.1")
+IPEntry.insert(0, "10.42.0.203")
 
 Label(root, text="RP Port:").grid(row=3, sticky=W, padx=4)
 PortEntry = Entry(root)
