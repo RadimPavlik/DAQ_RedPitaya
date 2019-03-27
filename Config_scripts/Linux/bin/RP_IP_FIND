@@ -1,0 +1,8 @@
+# Written by: Radim Pavlik
+# this script can be executed in linux terminal via command: 
+#'. RP_IP_FIND'
+
+#Translate IP from Hostname of connected RP
+#getent hosts rp-XXXXXX.local
+
+getent hosts rp-f05704.local
