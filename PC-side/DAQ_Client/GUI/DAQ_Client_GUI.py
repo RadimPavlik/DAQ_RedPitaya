@@ -1,3 +1,5 @@
+#Written by Radim Pavlík
+
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
@@ -195,17 +197,6 @@ def continuous_measurement(force = True):
 		root.after(1, continuous_measurement, False) #Callback on self
 
 
-def send_measure_request2(event):
-	global s
-	s.send(struct.pack('<I', 0<<30))
-	print("measure request sended")
-
-def close_connection2(event):
-	global s
-	print("Connection terminated")
-	SHUT_RD = socket.SHUT_RD
-	s.shutdown(SHUT_RD)
-	s.close()
 
 root = Tk() #main window
 
@@ -227,7 +218,7 @@ Label(root, text="RP IP Address:").grid(row=2, sticky=W, padx=4)
 IPEntry = Entry(root)
 IPEntry.grid(row=2,column=1, sticky=E,pady=4)
 IPEntry.delete(0,END)
-IPEntry.insert(0, "rp-f057bc.local")
+IPEntry.insert(0, "10.42.0.1")
 
 Label(root, text="RP Port:").grid(row=3, sticky=W, padx=4)
 PortEntry = Entry(root)
@@ -247,16 +238,6 @@ StartButton2 = Button(root,text="Start Measuring")
 StartButton2.grid(row=6, sticky=W)
 StartButton2.bind("<Button-1>", start_measuring)
 
-Label(root, text="CopyPack").grid(row=7, sticky=W, padx=4)
-num3Entry = Entry(root)
-num3Entry.grid(row=7,column=1, sticky=E,pady=4)
 
-TESTButton = Button(root,text="Request Measuring")
-TESTButton.grid(row=8, sticky=W)
-TESTButton.bind("<Button-1>", send_measure_request2)
-
-TESTButton2 = Button(root,text="Close Connection")
-TESTButton2.grid(row=9, sticky=W)
-TESTButton2.bind("<Button-1>", close_connection2)
 
 root.mainloop()
