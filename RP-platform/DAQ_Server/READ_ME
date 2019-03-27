@@ -1,3 +1,18 @@
-Move this file into RP-filesystem (sd-card) via transport protocol and perform compilation.
+#Move this file into RP-filesystem (SD-card) via scp transport protocol and perform compilation.
+# should be located on /root/DAQ_server.c 
 
-1.)
+# in linux terminal use command:
+#1.) "scp file user@ip:/dir/name"
+# scp DAQ_server.c root@10.42.0.203:/root/DAQ_server.c
+# in case of windows can be used software WinSCP for transport to SD-card (https://winscp.net/eng/download.php)
+# linux also support graphical softwares. For example FilleZilla (https://filezilla-project.org/)
+
+# next step is to compile this DAQ_server.c file directly on RedPitaya
+#2.) for this intesion we need to connect RP-platform via ssh protocol (modified script RP_TEST_connect can be used) or command "ssh user@ip" 
+# ssh root@10.42.0.203
+# Then the compilation is done via command: "gcc -level_of_optim input_file.c -o output_app"
+# gcc DAQ_server.c -o START_DAQ_server
+# now the application can be started via command: "./START_DAQ_server" and stopped if "ctrl+c" is pressed
+# but for valid behavior we still need correct fpga image (bitstream) loaded
+
+# starting sequence of server, should be automated if instructions above were followed, via script "DAQ_RedPitaya/Config_scripts/Linux/bin/RP_DAQ_CONNECT" 
