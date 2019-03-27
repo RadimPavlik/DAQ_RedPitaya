@@ -1,0 +1,41 @@
+# Written by: Radim Pavlik
+# this script can be executed in linux terminal via command: 
+#'. RP_DAQ_CONNECT'
+
+#1)Estabilish ssh connection to RP
+
+#solution A)
+# for full functionality is expected installation of software "sshpass" and changing of username and IP address
+# 'sudo apt-get install sshpass'
+#sshpass -p PASSWORD ssh -o StrictHostKeyChecking=no USERNAME@IPADDRESS
+#sshpass -p root ssh -o StrictHostKeyChecking=no root@10.42.0.203 "sh DAQ_PREPARE.sh " #"command1 && command2 ?"
+
+#solution B)
+#ssh pass or this solution: ()
+ssh root@10.42.0.203 << EOF
+cat DAQ.bit > /dev/xdevcfg
+./START_DAQ_server
+EOF
+
+#2)Load valid Bitstream - VHDL Image
+#3)Start Server solution B
+
+
+#-----------------------------------------on the level of RP DAQ_PREPARE.sh if solution A is used.
+
+#2)Load valid Bitstream - VHDL Image
+
+#Bitstream is expected to be allready on SD-card on root level named: ''
+#cat <BIT_FILE_NAME.bit> /dev/xdevcfg
+
+
+
+#3)Start Server
+
+
+#Server app is expected to be allready compiled on SD-card on root level named: ''
+#./....
+
+#4)Checks and write status done if valid
+
+
