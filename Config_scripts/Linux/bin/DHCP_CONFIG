@@ -1,0 +1,16 @@
+#info-file
+
+# config files are located: 
+#1) "/etc/default/isc-dhcp-server" 
+#	-need to change valid INTERFACE (can be looked up via "ifconfig" or "ip a")
+#2) "/etc/dhcp/dhcpd.conf"
+#	-need to un-comment and set valid configuration for DHCP
+
+#  commands:
+#1) "sudo systemctl status isc-dhcp-server.service"
+#.. "status, restart, start, stop"
+
+
+
+# for debug journalctl _PID=XXXXX
+
