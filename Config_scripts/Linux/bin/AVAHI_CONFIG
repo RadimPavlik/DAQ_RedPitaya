@@ -1,0 +1,12 @@
+#info-file
+
+#AVAHI - on windows bonjour or something 
+# config files are located:
+# "/etc/avahi/avahi-daemon.conf" 
+
+# commands:
+# "/etc/init.d/avahi-daemon status"
+# "status, start, restart, stop"
+
+#status
+#avahi-browse --all
