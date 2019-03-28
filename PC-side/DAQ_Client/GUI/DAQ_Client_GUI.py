@@ -5,6 +5,7 @@ from tkinter import ttk
 from tkinter import filedialog
 from tkinter.filedialog import askopenfilename
 
+
 import time
 import struct
 import socket
@@ -108,7 +109,7 @@ def create_new_file():
 	print("Creating new file: formatted %Y%m%d-%H%M%S")
 	filename = time.strftime("%Y%m%d-%H%M%S")
 	print("filename: "+ filename+".bin")
-	UseFile= open(filename+".bin","w+")
+	UseFile= open(filename+".bin","wb")
 	FileOpened = True
 
 
