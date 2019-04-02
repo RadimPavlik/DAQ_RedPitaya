@@ -4,6 +4,11 @@ import socket
 
 import atexit
 
+import array
+import matplotlib.pyplot as plt
+import numpy
+
+
 def exit_handler():
 	s.close()
 	print("Application is ending!")
@@ -29,6 +34,9 @@ PreTrigger = 5
 time_old = 0
 time_new = 0
 
+probehlo_akvizic = 0
+hodnoty = array.array('i')
+
 requested = False
 
 
@@ -48,18 +56,32 @@ def Receive():
 	global time_old
 	global time_new
 	global requested
+	global probehlo_akvizic
 
 	data = s.recv(BUFFER_SIZE)
+	
 	if (data < bytes(0) and socket.errno != socket.EAGAIN):
 		print("Connection terminated")
 		s.close()
 	elif (data > bytes(0)):
 		requested = False
 		#print(data)
+		#ukladej data pro potřebu grafu
+		probehlo_akvizic = probehlo_akvizic+1
+		hodnoty.fromstring(data)
+		#print(hodnoty)
+		#data = numpy.array(data, 'i')
 		time_old = time_new
 		time_new = time.time()
-		print("Time before two data blocks received : " +str(time_new - time_old) )
-		print("END")
+		#pro kazde 100 mereni
+		if( probehlo_akvizic >= 100 ):
+			probehlo_akvizic = 0
+			#tisk hodnoty/v grafu
+			plt.plot(hodnoty)
+			plt.ylabel('some numbers')
+			plt.show()
+			print("Time before two data blocks received : " +str(time_new - time_old) )
+			print("END")
 
 Setup()
 
