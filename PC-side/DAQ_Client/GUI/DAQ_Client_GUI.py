@@ -141,7 +141,9 @@ def connect_to_rp():
 
 	s.connect((remote_ip, port))
 	print("Socket Connected to " + host + " using IP " + remote_ip + " by port " + str(port))
-
+	StatusLabel = Label(root, text = 'Online', font=("Helvetica, 16"), fg="green")	
+	StatusLabel.grid(row=0,column =2,sticky=E)	
+	
 
 def send_set_configuration():
 	global s
@@ -184,6 +186,8 @@ def close_connection(event):
 	s.shutdown(SHUT_RD)
 	s.close()
 	print("Connection to server closed")
+	StatusLabel = Label(root, text = 'Offline', font=("Helvetica, 16"), fg="red")
+	StatusLabel.grid(row=0,column =2,sticky=E)
 
 def send_measure_request():
 	global s
@@ -211,6 +215,7 @@ def continuous_measurement(force = True):
 
 
 root = Tk() #main window
+root.title("DAQ-client-app")
 
 frame= Frame(root)
 
@@ -250,6 +255,8 @@ StartButton2 = Button(root,text="Start Measuring")
 StartButton2.grid(row=6, sticky=W)
 StartButton2.bind("<Button-1>", start_measuring)
 
+StatusLabel = Label(root, text = 'Offline', font=("Helvetica, 16"), fg="red")
+StatusLabel.grid(row=0,column =2,sticky=E)
 
 
 root.mainloop()
