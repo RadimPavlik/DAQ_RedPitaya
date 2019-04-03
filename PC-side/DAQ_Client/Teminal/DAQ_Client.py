@@ -1,3 +1,6 @@
+# run in python3 
+# written by : Radim Pavlik
+
 import time
 import struct
 import socket
@@ -7,7 +10,6 @@ import atexit
 import array
 import matplotlib.pyplot as plt
 import numpy
-
 
 def exit_handler():
 	s.close()
@@ -57,6 +59,7 @@ def Receive():
 	global time_new
 	global requested
 	global probehlo_akvizic
+	global hodnoty
 
 	data = s.recv(BUFFER_SIZE)
 	
@@ -66,9 +69,8 @@ def Receive():
 	elif (data > bytes(0)):
 		requested = False
 		#print(data)
-		#ukladej data pro potřebu grafu
+		#ukladej data pro potrebu grafu
 		probehlo_akvizic = probehlo_akvizic+1
-		hodnoty.fromstring(data)
 		#print(hodnoty)
 		#data = numpy.array(data, 'i')
 		time_old = time_new
@@ -76,12 +78,20 @@ def Receive():
 		#pro kazde 100 mereni
 		if( probehlo_akvizic >= 100 ):
 			probehlo_akvizic = 0
+			hodnoty.fromstring(data)
 			#tisk hodnoty/v grafu
 			plt.plot(hodnoty)
+			xmin=0
+			xmax=1000
+			ymin=-6E7
+			ymax=6E7
+			plt.xlim([xmin,xmax])
+			plt.ylim([ymin,ymax])
 			plt.ylabel('some numbers')
 			plt.show()
 			print("Time before two data blocks received : " +str(time_new - time_old) )
 			print("END")
+			hodnoty = array.array('i')
 
 Setup()
 
