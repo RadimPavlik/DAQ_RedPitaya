@@ -15,6 +15,8 @@ import sys
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+import os
+
 
 
 
@@ -142,6 +144,7 @@ def connect_to_rp():
 	global remote_ip
 	global port
 	global s
+	global StatusLabel
 
 	s.connect((remote_ip, port))
 	print("Socket Connected to " + host + " using IP " + remote_ip + " by port " + str(port))
@@ -180,6 +183,7 @@ def send_set_configuration():
 
 def close_connection(event):
 	global s
+	global StatusLabel
 
 	s.send(struct.pack('<I', 3<<30))
 	print("Zaviram spojeni:")
@@ -261,6 +265,13 @@ def Axis_update(event):
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))	
 
+def RP_Config_Linux(event):
+	global ConfigStatusLabel
+	global ConfigStatus_var
+	os.system("gnome-terminal.real --name='DAQ' --working-directory='/home/redpitaya/Desktop/DAQ_RedPitaya_GIT/DAQ_RedPitaya/Config_scripts/Linux/bin/' --command './RP_DAQ_CONNECT'")
+	#os.system("gnome-terminal.real --name='DAQ' --working-directory='/home/redpitaya/Desktop/DAQ_RedPitaya_GIT/DAQ_RedPitaya/PC-side/DAQ_Client/GUI' --command 'python3 test.py'")
+	#ConfigStatus_var.set("RP-server-ON")
+
 root = Tk() #main window
 root.title("DAQ-client-app")
 
@@ -293,6 +304,16 @@ PortEntry.insert(0, "1001")
 OpenButton = Button(root,text="Open file:")
 OpenButton.grid(row=4, column=1, sticky=W)
 OpenButton.bind("<Button-1>", open_file)
+
+ConfigButton = Button(root,text="Config-RP-Server LINUX")
+ConfigButton.grid(row=4, column=2, sticky=W)
+ConfigButton.bind("<Button-1>", RP_Config_Linux)
+
+#ConfigStatus_var = StringVar()
+#ConfigStatus_var.set("RP-server-OFF")
+
+#ConfigStatusLabel = Label(root, textvariable = ConfigStatus_var, font=("Helvetica, 16"), fg="red")
+#ConfigStatusLabel.grid(row=4,column =3,sticky=E)
 
 StopButton = Button(root,text="Stop Measuring")
 StopButton.grid(row=6, column=1, sticky=W)
