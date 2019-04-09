@@ -1,4 +1,5 @@
 #Written by Radim Pavlík
+#Run in python3 
 
 from tkinter import *
 from tkinter import ttk
@@ -10,6 +11,9 @@ import time
 import struct
 import socket
 import sys
+
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 
@@ -142,7 +146,7 @@ def connect_to_rp():
 	s.connect((remote_ip, port))
 	print("Socket Connected to " + host + " using IP " + remote_ip + " by port " + str(port))
 	StatusLabel = Label(root, text = 'Online', font=("Helvetica, 16"), fg="green")	
-	StatusLabel.grid(row=0,column =2,sticky=E)	
+	StatusLabel.grid(row=0,column =3,sticky=E)	
 	
 
 def send_set_configuration():
@@ -187,7 +191,7 @@ def close_connection(event):
 	s.close()
 	print("Connection to server closed")
 	StatusLabel = Label(root, text = 'Offline', font=("Helvetica, 16"), fg="red")
-	StatusLabel.grid(row=0,column =2,sticky=E)
+	StatusLabel.grid(row=0,column =3,sticky=E)
 
 def send_measure_request():
 	global s
@@ -212,51 +216,130 @@ def continuous_measurement(force = True):
 			receive_measurement()
 		root.after(1, continuous_measurement, False) #Callback on self
 
+def X_axis_increment(event):
+	global PlotLine
+	global PlotAxis
+	global PlotLine
+	global XAxis_max
+	#increment X axis limit
+	XAxis_max = XAxis_max+10
+	PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
+	PlotAxis = PlotFigure.add_subplot(111)
+	PlotLine = FigureCanvasTkAgg(PlotFigure, root)
+	PlotLine.get_tk_widget().grid(row=5,column=0)
+	PlotAxis.set_title('Received Data Visualisation')
+	PlotAxis.axes.set_xlim(0,XAxis_max)
+	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
+	print("X-axis incemented 10 samples")	
 
+def X_axis_decrement(event):
+	global PlotLine
+	global PlotAxis
+	global PlotLine
+	global XAxis_max	
+	#decrement X axis limit
+	XAxis_max = XAxis_max-10
+	PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
+	PlotAxis = PlotFigure.add_subplot(111)
+	PlotLine = FigureCanvasTkAgg(PlotFigure, root)
+	PlotLine.get_tk_widget().grid(row=5,column=0)
+	PlotAxis.set_title('Received Data Visualisation')
+	PlotAxis.axes.set_xlim(0,XAxis_max)
+	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
+	print("X-axis decremnted 10 samples")
+
+def Axis_update(event):
+	global PlotLine
+	global PlotAxis
+	global PlotLine
+	global XAxis_max
+	PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
+	PlotAxis = PlotFigure.add_subplot(111)
+	PlotLine = FigureCanvasTkAgg(PlotFigure, root)
+	PlotLine.get_tk_widget().grid(row=5,column=0)
+	PlotAxis.set_title('Received Data Visualisation')
+	PlotAxis.axes.set_xlim(0,XAxis_max)
+	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))	
 
 root = Tk() #main window
 root.title("DAQ-client-app")
 
 frame= Frame(root)
 
-Label(root, text="Trigger Level:").grid(row=0, sticky=W, padx=4)
+Label(root, text="Trigger Level:").grid(row=0, column=1, sticky=W, padx=4)
 TrigEntry = Entry(root)
-TrigEntry.grid(row=0,column=1, sticky=E,pady=4)
+TrigEntry.grid(row=0,column=2, sticky=E,pady=4)
 TrigEntry.delete(0,END)
 TrigEntry.insert(0, "0")
 
-Label(root, text="PreTrigger Length:").grid(row=1, sticky=W, padx=4)
+Label(root, text="PreTrigger Length:").grid(row=1,column=1, sticky=W, padx=4)
 PreTrigEntry = Entry(root)
-PreTrigEntry.grid(row=1,column=1, sticky=E,pady=4)
+PreTrigEntry.grid(row=1,column=2, sticky=E,pady=4)
 PreTrigEntry.delete(0,END)
 PreTrigEntry.insert(0, "0")
 
-Label(root, text="RP IP Address:").grid(row=2, sticky=W, padx=4)
+Label(root, text="RP IP Address:").grid(row=2,column=1, sticky=W, padx=4)
 IPEntry = Entry(root)
-IPEntry.grid(row=2,column=1, sticky=E,pady=4)
+IPEntry.grid(row=2,column=2, sticky=E,pady=4)
 IPEntry.delete(0,END)
 IPEntry.insert(0, "10.42.0.203")
 
-Label(root, text="RP Port:").grid(row=3, sticky=W, padx=4)
+Label(root, text="RP Port:").grid(row=3,column=1, sticky=W, padx=4)
 PortEntry = Entry(root)
-PortEntry.grid(row=3,column=1, sticky=E,pady=4)
+PortEntry.grid(row=3,column=2, sticky=E,pady=4)
 PortEntry.delete(0,END)
 PortEntry.insert(0, "1001")
 
 OpenButton = Button(root,text="Open file:")
-OpenButton.grid(row=4, sticky=W)
+OpenButton.grid(row=4, column=1, sticky=W)
 OpenButton.bind("<Button-1>", open_file)
 
 StopButton = Button(root,text="Stop Measuring")
-StopButton.grid(row=5, sticky=W)
+StopButton.grid(row=6, column=1, sticky=W)
 StopButton.bind("<Button-1>", close_connection)
 
 StartButton2 = Button(root,text="Start Measuring")
-StartButton2.grid(row=6, sticky=W)
+StartButton2.grid(row=7,column=1, sticky=W)
 StartButton2.bind("<Button-1>", start_measuring)
 
 StatusLabel = Label(root, text = 'Offline', font=("Helvetica, 16"), fg="red")
-StatusLabel.grid(row=0,column =2,sticky=E)
+StatusLabel.grid(row=0,column =3,sticky=E)
+
+PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
+PlotAxis = PlotFigure.add_subplot(111)
+PlotLine = FigureCanvasTkAgg(PlotFigure, root)
+PlotLine.get_tk_widget().grid(row=5,column=0)
+PlotAxis.set_title('Received Data Visualisation')
+XAxis_max = 1000
+PlotAxis.axes.set_xlim(0,XAxis_max)
+
+
+XosaplusButton = Button(root,text="X axis+")
+XosaplusButton.grid(row=8, column= 1, sticky=W)
+XosaplusButton.bind("<Button-1>", X_axis_increment)
+
+XosaminusButton = Button(root,text="X axis-")
+XosaminusButton.grid(row=8, column= 2, sticky=W)
+XosaminusButton.bind("<Button-1>", X_axis_decrement)
+
+Label(root, text="Y axis min:").grid(row=9, column=1, sticky=W, padx=4)
+Yosamin = Entry(root)
+Yosamin.grid(row=9,column=2, sticky=E,pady=2)
+Yosamin.delete(0,END)
+Yosamin.insert(0, "0")
+
+Label(root, text="Y axis max:").grid(row=10, column=1, sticky=W, padx=4)
+Yosamax = Entry(root)
+Yosamax.grid(row=10,column=2, sticky=E,pady=2)
+Yosamax.delete(0,END)
+Yosamax.insert(0, "0")
+
+
+XosaminusButton = Button(root,text="Update Axis setup")
+XosaminusButton.grid(row=11, column= 1, sticky=W)
+XosaminusButton.bind("<Button-1>", Axis_update)
+
+
 
 
 root.mainloop()
