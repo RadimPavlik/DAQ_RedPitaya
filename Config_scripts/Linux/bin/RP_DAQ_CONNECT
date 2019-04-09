@@ -2,6 +2,11 @@
 # this script can be executed in linux terminal via command: 
 #'. RP_DAQ_CONNECT'
 
+#0) Change Terminal Title
+PS1=$
+PROMPT_COMMAND=
+echo -en "\033]0;RP_DAQ_SERVER_RUNNING\a"
+
 #1)Estabilish ssh connection to RP
 
 #solution A)
