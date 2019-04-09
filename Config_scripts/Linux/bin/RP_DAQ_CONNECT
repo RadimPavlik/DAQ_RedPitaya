@@ -12,7 +12,7 @@
 
 #solution B)
 #ssh pass or this solution: ()
-ssh root@10.42.0.203 << EOF
+ssh root@rp-f05704.local << EOF
 cat DAQ.bit > /dev/xdevcfg
 ./START_DAQ_server
 EOF
