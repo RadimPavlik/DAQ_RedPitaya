@@ -54,6 +54,11 @@ def handle_nonblocking_socket():
 	global time_old
 	global time_new 
 	global recv_counter
+
+	global Persistance
+	print("Listen to me:")
+	print(Persistance)
+
 	draw_graph_every_X_rep =200
 
 	try:
@@ -80,17 +85,11 @@ def VisualizationDataPlot(dataString_to_plot):
 	global PlotLine
 	global XAxis_max
 	global converted_data
-
-	#PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
-	#PlotAxis = PlotFigure.add_subplot(111)
-	#PlotLine = FigureCanvasTkAgg(PlotFigure, root)
-	#PlotLine.get_tk_widget().grid(row=5,column=0)
-	#PlotAxis.plot([1,2,3,4,5,6,7,8,9])	
+	global Persistance
 	converted_data= array.array('i')
 	converted_data.fromstring(dataString_to_plot)
-	#print("Conversion Completed")
-	#print(converted_data)
-	PlotAxis.clear()
+	if (Persistance != True):	
+		PlotAxis.clear() #commenting this line will cause persistance
 	PlotAxis.plot(converted_data)
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
@@ -260,15 +259,11 @@ def X_axis_increment(event):
 	Step = int(XosaStep.get())
 	#increment X axis limit
 	XAxis_max = XAxis_max+Step
-	#PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
-	#PlotAxis = PlotFigure.add_subplot(111)
-	#PlotLine = FigureCanvasTkAgg(PlotFigure, root)
-	#PlotLine.get_tk_widget().grid(row=5,column=0)
 	PlotAxis.set_title('Received Data Visualisation')
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
 	PlotLine.draw()
-	print("X-axis incemented 10 samples")	
+	print("X-axis incemented "+str(Step))	
 
 def X_axis_decrement(event):
 	global XosaStep
@@ -280,25 +275,17 @@ def X_axis_decrement(event):
 	Step = int(XosaStep.get())
 	#decrement X axis limit
 	XAxis_max = XAxis_max-Step
-	#PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
-	#PlotAxis = PlotFigure.add_subplot(111)
-	#PlotLine = FigureCanvasTkAgg(PlotFigure, root)
-	#PlotLine.get_tk_widget().grid(row=5,column=0)
 	PlotAxis.set_title('Received Data Visualisation')
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
 	PlotLine.draw()
-	print("X-axis decremnted 10 samples")
+	#print("X-axis decremnted "+str(Step))
 
 def Axis_update(event):
 	global PlotLine
 	global PlotAxis
 	global PlotLine
 	global XAxis_max
-	#PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
-	#PlotAxis = PlotFigure.add_subplot(111)
-	#PlotLine = FigureCanvasTkAgg(PlotFigure, root)
-	#PlotLine.get_tk_widget().grid(row=5,column=0)
 	PlotAxis.set_title('Received Data Visualisation')
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
@@ -311,6 +298,12 @@ def RP_Config_Linux(event):
 	os.system("gnome-terminal.real --name='DAQ-server-ON' --working-directory='/home/redpitaya/Desktop/DAQ_RedPitaya_GIT/DAQ_RedPitaya/Config_scripts/Linux/bin/' --command './RP_DAQ_CONNECT'")
 	#os.system("gnome-terminal.real --name='DAQ' --working-directory='/home/redpitaya/Desktop/DAQ_RedPitaya_GIT/DAQ_RedPitaya/PC-side/DAQ_Client/GUI' --command 'python3 test.py'")
 	#ConfigStatus_var.set("RP-server-ON")
+
+def Clear_plot(event):
+	global PlotAxis
+	global PlotLine
+	PlotAxis.clear()
+	PlotLine.draw()
 
 root = Tk() #main window
 root.title("DAQ-client-app")
@@ -373,6 +366,7 @@ PlotLine.get_tk_widget().grid(row=5,column=0)
 PlotAxis.set_title('Received Data Visualisation')
 XAxis_max = 1000
 PlotAxis.axes.set_xlim(0,XAxis_max)
+PlotAxis.axes.set_ylim(-200000000,200000000)
 #PlotAxis.plot([0.1,0.5,1,2,3,4,5,6,7,8])
 
 
@@ -407,7 +401,13 @@ XosaminusButton = Button(root,text="Update Axis setup")
 XosaminusButton.grid(row=11, column= 1, sticky=W)
 XosaminusButton.bind("<Button-1>", Axis_update)
 
+PlotClearButton = Button(root,text="Clear Plot")
+PlotClearButton.grid(row=12, column=1, sticky=W)
+PlotClearButton.bind("<Button-1>", Clear_plot)
 
+Persistance= IntVar()
+PersistanceChButton = Checkbutton(root, text="Persistance", variable=Persistance)
+PersistanceChButton.grid(row=12,column=2, sticky=W)
 
 
 root.mainloop()
