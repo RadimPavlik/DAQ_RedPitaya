@@ -81,19 +81,23 @@ def VisualizationDataPlot(dataString_to_plot):
 	global XAxis_max
 	global converted_data
 
-	PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
-	PlotAxis = PlotFigure.add_subplot(111)
-	PlotLine = FigureCanvasTkAgg(PlotFigure, root)
-	PlotLine.get_tk_widget().grid(row=5,column=0)
+	#PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
+	#PlotAxis = PlotFigure.add_subplot(111)
+	#PlotLine = FigureCanvasTkAgg(PlotFigure, root)
+	#PlotLine.get_tk_widget().grid(row=5,column=0)
 	#PlotAxis.plot([1,2,3,4,5,6,7,8,9])	
 	converted_data= array.array('i')
 	converted_data.fromstring(dataString_to_plot)
-	print("Conversion Completed")
-	print(converted_data)
+	#print("Conversion Completed")
+	#print(converted_data)
+	PlotAxis.clear()
 	PlotAxis.plot(converted_data)
-	PlotAxis.set_title('Received Data Visualisation')
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
+	PlotAxis.set_title('Received Data Visualisation')
+	PlotLine.draw()
+	
+	
 
 def receive_measurement():
 	global UseFile
@@ -308,13 +312,13 @@ Label(root, text="Trigger Level:").grid(row=0, column=1, sticky=W, padx=4)
 TrigEntry = Entry(root)
 TrigEntry.grid(row=0,column=2, sticky=E,pady=4)
 TrigEntry.delete(0,END)
-TrigEntry.insert(0, "0")
+TrigEntry.insert(0, "10")
 
 Label(root, text="PreTrigger Length:").grid(row=1,column=1, sticky=W, padx=4)
 PreTrigEntry = Entry(root)
 PreTrigEntry.grid(row=1,column=2, sticky=E,pady=4)
 PreTrigEntry.delete(0,END)
-PreTrigEntry.insert(0, "0")
+PreTrigEntry.insert(0, "5")
 
 Label(root, text="RP IP Address:").grid(row=2,column=1, sticky=W, padx=4)
 IPEntry = Entry(root)
@@ -375,13 +379,13 @@ Label(root, text="Y axis min:").grid(row=9, column=1, sticky=W, padx=4)
 Yosamin = Entry(root)
 Yosamin.grid(row=9,column=2, sticky=E,pady=2)
 Yosamin.delete(0,END)
-Yosamin.insert(0, "0")
+Yosamin.insert(0, "-200000000")
 
 Label(root, text="Y axis max:").grid(row=10, column=1, sticky=W, padx=4)
 Yosamax = Entry(root)
 Yosamax.grid(row=10,column=2, sticky=E,pady=2)
 Yosamax.delete(0,END)
-Yosamax.insert(0, "0")
+Yosamax.insert(0, "200000000")
 
 
 XosaminusButton = Button(root,text="Update Axis setup")
