@@ -54,7 +54,7 @@ def handle_nonblocking_socket():
 	global time_old
 	global time_new 
 	global recv_counter
-	draw_graph_every_X_rep =50
+	draw_graph_every_X_rep =200
 
 	try:
 		data = s.recv(BUFFER_SIZE, socket.MSG_DONTWAIT)
@@ -256,31 +256,38 @@ def X_axis_increment(event):
 	global PlotAxis
 	global PlotLine
 	global XAxis_max
+	global Step
+	Step = int(XosaStep.get())
 	#increment X axis limit
-	XAxis_max = XAxis_max+10
-	PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
-	PlotAxis = PlotFigure.add_subplot(111)
-	PlotLine = FigureCanvasTkAgg(PlotFigure, root)
-	PlotLine.get_tk_widget().grid(row=5,column=0)
+	XAxis_max = XAxis_max+Step
+	#PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
+	#PlotAxis = PlotFigure.add_subplot(111)
+	#PlotLine = FigureCanvasTkAgg(PlotFigure, root)
+	#PlotLine.get_tk_widget().grid(row=5,column=0)
 	PlotAxis.set_title('Received Data Visualisation')
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
+	PlotLine.draw()
 	print("X-axis incemented 10 samples")	
 
 def X_axis_decrement(event):
+	global XosaStep
 	global PlotLine
 	global PlotAxis
 	global PlotLine
 	global XAxis_max	
+	global Step
+	Step = int(XosaStep.get())
 	#decrement X axis limit
-	XAxis_max = XAxis_max-10
-	PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
-	PlotAxis = PlotFigure.add_subplot(111)
-	PlotLine = FigureCanvasTkAgg(PlotFigure, root)
-	PlotLine.get_tk_widget().grid(row=5,column=0)
+	XAxis_max = XAxis_max-Step
+	#PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
+	#PlotAxis = PlotFigure.add_subplot(111)
+	#PlotLine = FigureCanvasTkAgg(PlotFigure, root)
+	#PlotLine.get_tk_widget().grid(row=5,column=0)
 	PlotAxis.set_title('Received Data Visualisation')
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
+	PlotLine.draw()
 	print("X-axis decremnted 10 samples")
 
 def Axis_update(event):
@@ -288,13 +295,15 @@ def Axis_update(event):
 	global PlotAxis
 	global PlotLine
 	global XAxis_max
-	PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
-	PlotAxis = PlotFigure.add_subplot(111)
-	PlotLine = FigureCanvasTkAgg(PlotFigure, root)
-	PlotLine.get_tk_widget().grid(row=5,column=0)
+	#PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
+	#PlotAxis = PlotFigure.add_subplot(111)
+	#PlotLine = FigureCanvasTkAgg(PlotFigure, root)
+	#PlotLine.get_tk_widget().grid(row=5,column=0)
 	PlotAxis.set_title('Received Data Visualisation')
 	PlotAxis.axes.set_xlim(0,XAxis_max)
-	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))	
+	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
+	PlotLine.draw()
+		
 
 def RP_Config_Linux(event):
 	global ConfigStatusLabel
@@ -374,6 +383,12 @@ XosaplusButton.bind("<Button-1>", X_axis_increment)
 XosaminusButton = Button(root,text="X axis-")
 XosaminusButton.grid(row=8, column= 2, sticky=W)
 XosaminusButton.bind("<Button-1>", X_axis_decrement)
+
+Label(root, text="X axis step:").grid(row=8, column=3, sticky=W, padx=1)
+XosaStep = Entry(root)
+XosaStep.grid(row=8,column=4, sticky=E,pady=1)
+XosaStep.delete(0,END)
+XosaStep.insert(0, "100")
 
 Label(root, text="Y axis min:").grid(row=9, column=1, sticky=W, padx=4)
 Yosamin = Entry(root)
