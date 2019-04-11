@@ -11,6 +11,7 @@ import time
 import struct
 import socket
 import sys
+import array
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -32,7 +33,7 @@ BUFFER_SIZE = (65536*2) # #4096
 time_old = 0
 time_new = 0
 
-
+recv_counter =0
 
 
 def open_file(event):
@@ -52,21 +53,47 @@ def handle_nonblocking_socket():
 	global RequestSend
 	global time_old
 	global time_new 
+	global recv_counter
+	draw_graph_every_X_rep =50
 
 	try:
 		data = s.recv(BUFFER_SIZE, socket.MSG_DONTWAIT)
 		if (data > bytes(0)):
 			time_old = time_new
 			time_new = time.time()
+			recv_counter = recv_counter + 1
 			print("Time before two data blocks received : " +str(time_new - time_old) )
 			#store received data
 			UseFile.write(data)
 			RequestSend = False
+			if (recv_counter >= draw_graph_every_X_rep):
+				recv_counter = 0
+				VisualizationDataPlot(data)
 		else:
 			print("0-bytes received")
 	except socket.error:
 		return None
 
+def VisualizationDataPlot(dataString_to_plot):
+	global PlotFigure
+	global PlotAxis
+	global PlotLine
+	global XAxis_max
+	global converted_data
+
+	PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
+	PlotAxis = PlotFigure.add_subplot(111)
+	PlotLine = FigureCanvasTkAgg(PlotFigure, root)
+	PlotLine.get_tk_widget().grid(row=5,column=0)
+	#PlotAxis.plot([1,2,3,4,5,6,7,8,9])	
+	converted_data= array.array('i')
+	converted_data.fromstring(dataString_to_plot)
+	print("Conversion Completed")
+	print(converted_data)
+	PlotAxis.plot(converted_data)
+	PlotAxis.set_title('Received Data Visualisation')
+	PlotAxis.axes.set_xlim(0,XAxis_max)
+	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
 
 def receive_measurement():
 	global UseFile
@@ -268,7 +295,7 @@ def Axis_update(event):
 def RP_Config_Linux(event):
 	global ConfigStatusLabel
 	global ConfigStatus_var
-	os.system("gnome-terminal.real --name='DAQ' --working-directory='/home/redpitaya/Desktop/DAQ_RedPitaya_GIT/DAQ_RedPitaya/Config_scripts/Linux/bin/' --command './RP_DAQ_CONNECT'")
+	os.system("gnome-terminal.real --name='DAQ-server-ON' --working-directory='/home/redpitaya/Desktop/DAQ_RedPitaya_GIT/DAQ_RedPitaya/Config_scripts/Linux/bin/' --command './RP_DAQ_CONNECT'")
 	#os.system("gnome-terminal.real --name='DAQ' --working-directory='/home/redpitaya/Desktop/DAQ_RedPitaya_GIT/DAQ_RedPitaya/PC-side/DAQ_Client/GUI' --command 'python3 test.py'")
 	#ConfigStatus_var.set("RP-server-ON")
 
@@ -333,6 +360,7 @@ PlotLine.get_tk_widget().grid(row=5,column=0)
 PlotAxis.set_title('Received Data Visualisation')
 XAxis_max = 1000
 PlotAxis.axes.set_xlim(0,XAxis_max)
+#PlotAxis.plot([0.1,0.5,1,2,3,4,5,6,7,8])
 
 
 XosaplusButton = Button(root,text="X axis+")
