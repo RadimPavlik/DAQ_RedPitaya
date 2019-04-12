@@ -27,6 +27,8 @@ SocketCreated = False
 MeasuringIsRunning = False
 RequestSend = False
 
+
+
 BUFFER_SIZE = (65536*2) # #4096
 
 # time stamps
@@ -55,10 +57,6 @@ def handle_nonblocking_socket():
 	global time_new 
 	global recv_counter
 
-	global Persistance
-	print("Listen to me:")
-	print(Persistance)
-
 	draw_graph_every_X_rep =200
 
 	try:
@@ -86,10 +84,11 @@ def VisualizationDataPlot(dataString_to_plot):
 	global XAxis_max
 	global converted_data
 	global Persistance
+
 	converted_data= array.array('i')
 	converted_data.fromstring(dataString_to_plot)
-	if (Persistance != True):	
-		PlotAxis.clear() #commenting this line will cause persistance
+	if (Persistance.get() != True):	
+		PlotAxis.clear() 
 	PlotAxis.plot(converted_data)
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
@@ -263,7 +262,7 @@ def X_axis_increment(event):
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
 	PlotLine.draw()
-	print("X-axis incemented "+str(Step))	
+	#print("X-axis incemented "+str(Step))	
 
 def X_axis_decrement(event):
 	global XosaStep
@@ -304,6 +303,10 @@ def Clear_plot(event):
 	global PlotLine
 	PlotAxis.clear()
 	PlotLine.draw()
+
+def TestValue(event):
+	global Persistance
+	print(Persistance.get())
 
 root = Tk() #main window
 root.title("DAQ-client-app")
@@ -406,8 +409,11 @@ PlotClearButton.grid(row=12, column=1, sticky=W)
 PlotClearButton.bind("<Button-1>", Clear_plot)
 
 Persistance= IntVar()
-PersistanceChButton = Checkbutton(root, text="Persistance", variable=Persistance)
+PersistanceChButton = Checkbutton(root, text="Persistance", variable=Persistance, onvalue=True, offvalue=False)
 PersistanceChButton.grid(row=12,column=2, sticky=W)
 
+TestButton = Button(root,text="TestButton")
+TestButton.grid(row=13, column=1, sticky=W)
+TestButton.bind("<Button-1>", TestValue)
 
 root.mainloop()
