@@ -11,7 +11,6 @@ import time
 import struct
 import socket
 import sys
-import array
 import numpy
 
 import matplotlib.pyplot as plt
@@ -87,12 +86,8 @@ def VisualizationDataPlot(dataString_to_plot):
 	global converted_data
 	global Persistance
 
-	converted_data= array.array('i')
-	#converted_data.itemsize(2)
-	#converted_data.fromstring(dataString_to_plot)
-	converted_data.frombytes(dataString_to_plot)
-	print("%d\n",converted_data)
-	print(converted_data.itemsize)
+	converted_data = numpy.fromstring(dataString_to_plot, dtype=numpy.int16)
+	#print("%d\n",converted_data)
 	if (Persistance.get() != True):	
 		PlotAxis.clear() 
 	PlotAxis.plot(converted_data)
@@ -375,7 +370,7 @@ PlotLine.get_tk_widget().grid(row=5,column=0)
 PlotAxis.set_title('Received Data Visualisation')
 XAxis_max = 1000
 PlotAxis.axes.set_xlim(0,XAxis_max)
-PlotAxis.axes.set_ylim(-200000000,200000000)
+PlotAxis.axes.set_ylim(-8000,8000)
 #PlotAxis.plot([0.1,0.5,1,2,3,4,5,6,7,8])
 
 
@@ -387,9 +382,9 @@ XosaminusButton = Button(root,text="X axis-")
 XosaminusButton.grid(row=8, column= 2, sticky=W)
 XosaminusButton.bind("<Button-1>", X_axis_decrement)
 
-Label(root, text="X axis step:").grid(row=8, column=3, sticky=W, padx=1)
+Label(root, text="X axis step:").grid(row=8, column=3, sticky=W, padx=4)
 XosaStep = Entry(root)
-XosaStep.grid(row=8,column=4, sticky=E,pady=1)
+XosaStep.grid(row=8,column=4, sticky=E,pady=2)
 XosaStep.delete(0,END)
 XosaStep.insert(0, "100")
 
@@ -397,13 +392,13 @@ Label(root, text="Y axis min:").grid(row=9, column=1, sticky=W, padx=4)
 Yosamin = Entry(root)
 Yosamin.grid(row=9,column=2, sticky=E,pady=2)
 Yosamin.delete(0,END)
-Yosamin.insert(0, "-200000000")
+Yosamin.insert(0, "-8000")
 
 Label(root, text="Y axis max:").grid(row=10, column=1, sticky=W, padx=4)
 Yosamax = Entry(root)
 Yosamax.grid(row=10,column=2, sticky=E,pady=2)
 Yosamax.delete(0,END)
-Yosamax.insert(0, "200000000")
+Yosamax.insert(0, "8000")
 
 
 XosaminusButton = Button(root,text="Update Axis setup")
