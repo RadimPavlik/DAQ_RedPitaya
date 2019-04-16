@@ -12,6 +12,7 @@ import struct
 import socket
 import sys
 import array
+import numpy
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -72,6 +73,7 @@ def handle_nonblocking_socket():
 			if (recv_counter >= draw_graph_every_X_rep):
 				recv_counter = 0
 				VisualizationDataPlot(data)
+
 		else:
 			print("0-bytes received")
 	except socket.error:
@@ -86,7 +88,11 @@ def VisualizationDataPlot(dataString_to_plot):
 	global Persistance
 
 	converted_data= array.array('i')
-	converted_data.fromstring(dataString_to_plot)
+	#converted_data.itemsize(2)
+	#converted_data.fromstring(dataString_to_plot)
+	converted_data.frombytes(dataString_to_plot)
+	print("%d\n",converted_data)
+	print(converted_data.itemsize)
 	if (Persistance.get() != True):	
 		PlotAxis.clear() 
 	PlotAxis.plot(converted_data)
@@ -313,13 +319,13 @@ root.title("DAQ-client-app")
 
 frame= Frame(root)
 
-Label(root, text="Trigger Level:").grid(row=0, column=1, sticky=W, padx=4)
+Label(root, text="Trigger Level (14bit int value):").grid(row=0, column=1, sticky=W, padx=4)
 TrigEntry = Entry(root)
 TrigEntry.grid(row=0,column=2, sticky=E,pady=4)
 TrigEntry.delete(0,END)
 TrigEntry.insert(0, "10")
 
-Label(root, text="PreTrigger Length:").grid(row=1,column=1, sticky=W, padx=4)
+Label(root, text="PreTrigger Length (num of samples):").grid(row=1,column=1, sticky=W, padx=4)
 PreTrigEntry = Entry(root)
 PreTrigEntry.grid(row=1,column=2, sticky=E,pady=4)
 PreTrigEntry.delete(0,END)
