@@ -27,15 +27,12 @@ Created by Pavlik Radim 7.1.2019
 
 int main(int argc, char *argv[])
 {
-  //int fd, j, sock_server, sock_client, size, yes = 1, nsmpl, navg, rx;
   int fd, j, sock_server, sock_client, size, yes = 1, nsmpl, triglvl, pretrig, rx;
   void *cfg, *dat;
   char *name = "/dev/mem";
-  // uint32_t naverages=0, nsamples=0, timing=0;
-  //uint32_t TrigLvl =0, PreTrig=0;
   int16_t TrigLvl =0, PreTrig=0;
-  //int32_t TrigLvl =0, PreTrig=0;
-  
+  //PreTrig max 15bit neznaminkove cislo?
+
   struct sockaddr_in addr;
   uint32_t command, value, tmp;
   uint16_t buffer[65540]; // 65536 pozic po 16 bitech (pro uint32_t 32768)
@@ -77,6 +74,8 @@ int main(int argc, char *argv[])
   }
 
   listen(sock_server, 1024); // druhý argument = defines the maximum length to which the queue of pending connections for sockfd may grow.
+  //add possible wait function to wait 1s to be able to see message if started via shell script
+  //sleep(1);
   printf("Listening on port 1001 ...\n");
 
 
@@ -89,9 +88,7 @@ int main(int argc, char *argv[])
 	   return EXIT_FAILURE;
     }
     while(1) //MSG_WAITALL
-    {
-      //sleep(1);
-     
+    {     
       rx = recv(sock_client, (char *)&command, 4, MSG_DONTWAIT);
       if (rx < 0 && errno != EAGAIN) 
       {
@@ -114,6 +111,10 @@ int main(int argc, char *argv[])
 
             case 2: //Pretrigger window
   				    PreTrig =  (command & 0xffff); //nsamples = (command & 0xff);
+              if(PreTrig < 0) //cannot be negative value
+              {
+                PreTrig = 0;
+              }
   				    printf("Length of Pretrigger window setup obtained %d\n",  PreTrig);
 				    break;
             
@@ -127,19 +128,23 @@ int main(int argc, char *argv[])
             case 0: /* fire */ // enable DAQ
               printf("Fire-command received for %d trigger level, %d pretrigger length\n",TrigLvl,PreTrig);
 				      //set trigger and NSAMPLES set NAVERAGES and stop measurement
-				      //*((int32_t *)(cfg + 0)) = (STOP) + (timing<<8) + (nsamples<<16) + (naverages<<24);
 				      *((int32_t *)(cfg + 0)) = (STOP) + (PreTrig<<1) + (TrigLvl<<16);
 				      //sleep(0.1); // wait 0.1 second
 				      time_begin = clock();
 				      // start measurement
+              //Memory check: is data stored correctly
               //printf(" status of memory 0x42000000 %#010x before\n", (*((uint32_t *)(cfg )) & 1) );
-				      *((int32_t *)(cfg + 0)) ^= 1;
+              printf(" status of memory 0x42000000 %#010x before\n", (*((uint32_t *)(cfg )) & 0xffffffff) );
+				      printf(" Trigger Value 0x42000000 %#010x \n", (*((uint32_t *)(cfg )) & 0xffff<<16) );
+              printf(" PreTrigger Value 0x42000000 %#010x \n", (*((uint32_t *)(cfg )) & 0xffff<<1) );
+              *((int32_t *)(cfg + 0)) ^= 1;
               //printf(" status of memory 0x42000000 %#010x after\n", (*((uint32_t *)(cfg )) & 1) );
+              printf(" status of memory 0x42000000 %#010x before\n", (*((uint32_t *)(cfg )) & 0xffffffff) );
 				      measuring = 1;
 				    break;
 
 			      default: //nothing
-				      printf("This should not happen! check code line (127)\n");
+				      printf("This should not happen!\n");
 				    break;
          }
       }
@@ -156,33 +161,6 @@ int main(int argc, char *argv[])
         //printf("Measuring finished \n");
       	time_spent = ((double)(clock() - time_begin)) / CLOCKS_PER_SEC; // measure time
 	
-      	/* transfer all samples */
-      	//nsmpl = N_SAMPLES;
-        //memcpy( buffer, dat, (2*N_SAMPLES) ); //*2 protoze 16bitové //otestovat zda čtu správná data
-        
-      	/*
-        for(j = 0; j < nsmpl; ++j) 
-        {
-          //buffer[j] = (*((uint16_t *)(dat) + (1+2*j) ));
-          //buffer[j] = ( (*((uint32_t *)(dat + j))) >> 16 );
-          //buffer[j] = ( (*((uint32_t *)(dat + 2*j))) );
-          buffer[j] = ((uint16_t *)dat)[j]; //Ales
-        }
-        */
-        
-        /*
-        for(j = 0; j < nsmpl; ++j) 
-        {
-          buffer[j] = ((uint16_t *)dat)[j]; //buffer[j] = (*((uint16_t *)(dat) + 2*j)); //buffer[j] = (*((uint32_t *)(dat + 4*j))); //
-          //printf("j=%d val:%x \n", j, buffer[j]);  
-          printf("%x \n",buffer[j]);
-        }
-        */
-			  //printf("buffer[0]=%#06x , [1]=%#06x , [2]= %#06x , [3]= %#06x \n", buffer[0],buffer[1],buffer[2],buffer[3]);
-
-        //printf("buffer filled sucessfuly \n");
-
-      	//send(sock_client, buffer, 2*N_SAMPLES, MSG_NOSIGNAL);//send(sock_client, buffer, 4*nsmpl, MSG_NOSIGNAL); //send copied data or
         send(sock_client, dat, 2*N_SAMPLES, MSG_NOSIGNAL); //send data via reference/adress to dat- mapped space
         //test if send not valid then break?
 
