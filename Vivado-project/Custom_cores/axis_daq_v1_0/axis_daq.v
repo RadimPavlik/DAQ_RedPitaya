@@ -5,11 +5,11 @@
 // ====================================================================================
 //
 //  daq_control:
-//      [31:16]     daq_threshold_reg
-//      [15:1]      --- unused ---
+//      [31:16]     daq_threshold_reg - signed
+//      [15:3]      daq_pretrigger_reg - unsigned
 //      [0]         daq_enable
-//	[1]	    force_trigger  -- still in test phase
-//	[2]	    channel_select -0 CH1, -1 CH2 -- still in test phase
+//	    [1]	        force_trigger  
+//	    [2]	        channel_select -0 CH1, -1 CH2 
 //
 //  daq_status:
 //      [31:1]      --- unused ---
@@ -80,11 +80,15 @@ module axis_daq #
   reg en_cnt_samples;
   reg pretriger_done_reg;
 
-
-
+//wire signed [15:0] s_axis_tdata_i;
+  wire signed [15:0] s_axis_tdata_CH1_i;
+  wire signed [15:0] s_axis_tdata_CH2_i;
 
   wire daq_enable;
-  wire signed [15:0] s_axis_tdata_i;
+  wire force_trigger;
+  wire channel_select;
+
+  
 
 
 
@@ -113,8 +117,8 @@ module axis_daq #
   assign force_trigger      = daq_control[1];
   assign channel_select     = daq_control[2];
 
-  //assign s_axis_tdata_i     = s_axis_tdata[15:0]; //CH1
-  assign s_axis_tdata_i     = s_axis_tdata[31:16]; //CH2
+  assign s_axis_tdata_CH1_i     = s_axis_tdata[15:0]; //CH1
+  assign s_axis_tdata_CH2_i     = s_axis_tdata[31:16]; //CH2
   
 
 // ====================================================================================
@@ -173,7 +177,7 @@ module axis_daq #
       en_cnt_samples          <=  1'b0;
       daq_done_reg            <=  1'b0;
       daq_threshold_reg       <= 16'b0;
-      daq_pretrigger_reg      <= 15'b0;
+      daq_pretrigger_reg      <= 13'b0;
     end
 
     else begin
@@ -189,7 +193,7 @@ module axis_daq #
                                 if (daq_enable == 1'b1)
                                   // latch trigger threshold value
                                   daq_threshold_reg  <= daq_control[31:16];
-                                  daq_pretrigger_reg <= daq_control[15:1];
+                                  daq_pretrigger_reg <= daq_control[15:3];
                               end
 
         st_pretrigger:        en_cnt_samples <= 1'b1;
@@ -229,11 +233,6 @@ module axis_daq #
   // ----------------------------------------------------------------------------------
 
   always @(posedge aclk)
-  
-  
-
-
-
   begin
     // default assignments
     bram_wr_reg             <=  1'b0;
@@ -242,30 +241,51 @@ module axis_daq #
     case(st_reg)
       st_idle:              bram_wr_reg <= 1'b0;
 
-      st_pretrigger:        if (s_axis_tvalid == 1'b1) begin
-                              bram_wr_reg <= 1'b1;
-			      bram_data_reg <= s_axis_tdata_i;
+      st_pretrigger:        begin
+                                if (s_axis_tvalid == 1'b1) begin
+                                    bram_wr_reg <= 1'b1;
+	                           end
+			                   if (channel_select == 1'b1) begin
+		                          bram_data_reg <= s_axis_tdata_CH2_i; //CH2
+                                end
+                                else begin
+			                     bram_data_reg <= s_axis_tdata_CH1_i; //CH1
+                                end
                             end
 
-      st_wait_for_trigger:  if (s_axis_tvalid == 1'b1) begin
-                              bram_wr_reg <= 1'b1;
-                              bram_data_reg <= s_axis_tdata_i;
-                            end
+      st_wait_for_trigger:  begin
+                                if (s_axis_tvalid == 1'b1) begin
+                                    bram_wr_reg <= 1'b1;
+                                end
+                                if (channel_select == 1'b1) begin
+			                        bram_data_reg <= s_axis_tdata_CH2_i; //CH2
+                                end
+                                else begin
+			                        bram_data_reg <= s_axis_tdata_CH1_i; //CH1
+			                    end
+			                end
 
-      st_triggered:         if (s_axis_tvalid == 1'b1) begin
-                              if (daq_full_reg == 1'b1) begin
-                                  bram_wr_reg <= 1'b1;
-                                  bram_data_reg <= C_delimiter;   // mark last position in the buffer
+      st_triggered:         begin
+                                if (s_axis_tvalid == 1'b1) begin
+                                    if (daq_full_reg == 1'b1) begin
+                                        bram_wr_reg <= 1'b1;
+                                        bram_data_reg <= C_delimiter;   // mark last position in the buffer
+                                    end
+                                    else begin
+                                        bram_wr_reg <= 1'b1;
+                                    end
+                                    if (channel_select == 1'b1) begin
+			      	                    bram_data_reg <= s_axis_tdata_CH2_i; //CH2
+			      	                end
+                                 end
+                                 else begin
+			                         bram_data_reg <= s_axis_tdata_CH1_i; //CH1
+                                 end
                               end
-                              else begin
-                                  bram_wr_reg <= 1'b1;
-                                  bram_data_reg <= s_axis_tdata_i;
-                              end
-                            end
 
       st_done:              bram_wr_reg <= 1'b0;
 
-    endcase;
+    endcase
   end
 
 
@@ -279,13 +299,17 @@ module axis_daq #
     if (~aresetn)
       daq_triggered_reg      <= 1'b0;
     else
-
       daq_triggered_reg      <= 1'b0;
 
       if (s_axis_tvalid == 1'b1)
-        if ((s_axis_tdata_i >= daq_threshold_reg) || (force_trigger == 1))
-          daq_triggered_reg  <= 1'b1;
-
+        
+         if (channel_select == 1'b1) begin
+            if(s_axis_tdata_CH2_i >= daq_threshold_reg || (force_trigger == 1)) //CH2
+	        daq_triggered_reg  <= 1'b1;
+            end else begin
+            if(s_axis_tdata_CH1_i >= daq_threshold_reg || (force_trigger == 1)) //CH1
+	        daq_triggered_reg  <= 1'b1;
+	     end	    
   end
 
 
