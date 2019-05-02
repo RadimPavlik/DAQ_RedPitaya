@@ -245,11 +245,11 @@ module axis_daq #
                                 if (s_axis_tvalid == 1'b1) begin
                                     bram_wr_reg <= 1'b1;
 	                           end
-			                   if (channel_select == 1'b1) begin
+			        if (channel_select == 1'b1) begin
 		                          bram_data_reg <= s_axis_tdata_CH2_i; //CH2
                                 end
-                                else begin
-			                     bram_data_reg <= s_axis_tdata_CH1_i; //CH1
+                                if (channel_select == 1'b0) begin
+			                  bram_data_reg <= s_axis_tdata_CH1_i; //CH1
                                 end
                             end
 
@@ -260,7 +260,7 @@ module axis_daq #
                                 if (channel_select == 1'b1) begin
 			                        bram_data_reg <= s_axis_tdata_CH2_i; //CH2
                                 end
-                                else begin
+                                if (channel_select == 1'b0) begin
 			                        bram_data_reg <= s_axis_tdata_CH1_i; //CH1
 			                    end
 			                end
@@ -278,7 +278,7 @@ module axis_daq #
 			      	                    bram_data_reg <= s_axis_tdata_CH2_i; //CH2
 			      	                end
                                  end
-                                 else begin
+                                 if (channel_select == 1'b0) begin
 			                         bram_data_reg <= s_axis_tdata_CH1_i; //CH1
                                  end
                               end
