@@ -9,6 +9,7 @@ import atexit
 
 import array
 import matplotlib.pyplot as plt
+
 import numpy
 
 def exit_handler():
@@ -29,9 +30,10 @@ BUFFER_SIZE = 65536
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((TCP_IP, TCP_PORT))
 
-TriggerLvl = 10
-PreTrigger = 5
-
+TriggerLvl = -2000
+PreTrigger = 2
+ForcedTrigger = 0
+ChannelSelect = 1 #0=CH1, 1=CH2
 
 time_old = 0
 time_new = 0
@@ -42,9 +44,23 @@ hodnoty = array.array('i')
 requested = False
 
 
+
 def Setup():
-	s.send(struct.pack('<I', 1<<30 | TriggerLvl )) #
-	s.send(struct.pack('<I', 2<<30 | PreTrigger )) #number of samples
+	print("App in Setup")
+	TriggerLvl = -2000
+	PreTrigger = 2
+	ForcedTrigger = 0
+	ChannelSelect = 1 #0=CH1, 1=CH2
+
+	TriggerLvl = struct.pack('<h',TriggerLvl)
+	TriggerFlag = struct.pack('<H',1<<13)
+	Trig = b"".join([TriggerLvl, TriggerFlag])
+	s.send(Trig)
+
+	#s.send(struct.pack('<i', 1<<29 | TriggerLvl ))   # signed int is 'i'
+	s.send(struct.pack('<I', 2<<29 | PreTrigger ))   # number of samples
+	s.send(struct.pack('<I', 4<<29 | ForcedTrigger)) # if there is necessary to manualy trigger event
+	s.send(struct.pack('<I', 5<<29 | ChannelSelect )) # select the channel
 	
 
 def Request():
@@ -76,26 +92,28 @@ def Receive():
 		time_old = time_new
 		time_new = time.time()
 		#pro kazde 100 mereni
-		if( probehlo_akvizic >= 100 ):
+		if( probehlo_akvizic >= 100 ):			
 			probehlo_akvizic = 0
-			hodnoty.fromstring(data)
+			#hodnoty.fromstring(data)
+			hodnoty = numpy.fromstring(data, dtype=numpy.int16)
 			#tisk hodnoty/v grafu
 			plt.plot(hodnoty)
 			xmin=0
 			xmax=1000
-			ymin=-6E7
-			ymax=6E7
+			ymin=-8000
+			ymax=8000
 			plt.xlim([xmin,xmax])
 			plt.ylim([ymin,ymax])
 			plt.ylabel('some numbers')
 			plt.show()
 			print("Time before two data blocks received : " +str(time_new - time_old) )
 			print("END")
-			hodnoty = array.array('i')
+			#hodnoty = array.array('i')
 
 Setup()
 
 while True:
+	Setup()
 	Request()
 	
 	Receive()
