@@ -30,10 +30,10 @@ BUFFER_SIZE = 65536
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((TCP_IP, TCP_PORT))
 
-TriggerLvl = -2000
-PreTrigger = 2
-ForcedTrigger = 0
-ChannelSelect = 1 #0=CH1, 1=CH2
+
+#PreTrigger = 2
+#ForcedTrigger = 0
+#ChannelSelect = 0 #0=CH1, 1=CH2
 
 time_old = 0
 time_new = 0
@@ -42,22 +42,32 @@ probehlo_akvizic = 0
 hodnoty = array.array('i')
 
 requested = False
+ 
+VoltageConversionCoefficient = 8 # (14bit sign Range/2)/mV .. (16384/2)/1000 # = 1mV cca 8,192 float :/
+VoltagePlotOffset_mV = 0 # calibration of non symetricity
 
+TimeConversionCoefficient = 0.000067 # = 1ns
 
 
 def Setup():
+	global VoltageConversionCoefficient
+
 	print("App in Setup")
-	TriggerLvl = -2000
-	PreTrigger = 2
+
+	TriggerLvl = -500 #mV
+	TriggerLvL_converted = int(TriggerLvl*VoltageConversionCoefficient)
+	print("Trigger Level converted=",TriggerLvL_converted," Trigger Level wanted=",TriggerLvl,"mV")
+	
+	PreTrigger = 2 # samples
 	ForcedTrigger = 0
 	ChannelSelect = 1 #0=CH1, 1=CH2
 
-	TriggerLvl = struct.pack('<h',TriggerLvl)
+	TriggerLvL_converted = struct.pack('<h',TriggerLvL_converted)
 	TriggerFlag = struct.pack('<H',1<<13)
-	Trig = b"".join([TriggerLvl, TriggerFlag])
+	Trig = b"".join([TriggerLvL_converted, TriggerFlag])
 	s.send(Trig)
 
-	#s.send(struct.pack('<i', 1<<29 | TriggerLvl ))   # signed int is 'i'
+	#s.send(struct.pack('<i', 1<<29 | TriggerLvL_converted ))   # signed int is 'i'
 	s.send(struct.pack('<I', 2<<29 | PreTrigger ))   # number of samples
 	s.send(struct.pack('<I', 4<<29 | ForcedTrigger)) # if there is necessary to manualy trigger event
 	s.send(struct.pack('<I', 5<<29 | ChannelSelect )) # select the channel
@@ -76,6 +86,8 @@ def Receive():
 	global requested
 	global probehlo_akvizic
 	global hodnoty
+	global VoltageConversionCoefficient
+	global VoltagePlotOffset_mV
 
 	data = s.recv(BUFFER_SIZE)
 	
@@ -94,30 +106,32 @@ def Receive():
 		#pro kazde 100 mereni
 		if( probehlo_akvizic >= 100 ):			
 			probehlo_akvizic = 0
-			#hodnoty.fromstring(data)
 			hodnoty = numpy.fromstring(data, dtype=numpy.int16)
+			print(hodnoty)
+			hodnoty = (hodnoty/VoltageConversionCoefficient) + VoltagePlotOffset_mV # rescale and offset of received values
+			#print(hodnoty)
 			#tisk hodnoty/v grafu
 			plt.plot(hodnoty)
 			xmin=0
 			xmax=1000
-			ymin=-8000
-			ymax=8000
+			ymin=-1000
+			ymax=1000
 			plt.xlim([xmin,xmax])
 			plt.ylim([ymin,ymax])
-			plt.ylabel('some numbers')
+			plt.ylabel('Voltage [mV]')
+			plt.xlabel('Number of Samples')
 			plt.show()
 			print("Time before two data blocks received : " +str(time_new - time_old) )
 			print("END")
-			#hodnoty = array.array('i')
+			
 
 Setup()
 
 while True:
-	Setup()
+	#Setup() # neni nutne volat opakovane pokud se parametry nemeni
 	Request()
-	
 	Receive()
-	
+
 	#time.sleep(0.0001)
 	#time.sleep(1)
 
