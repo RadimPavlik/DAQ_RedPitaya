@@ -8,6 +8,7 @@ Created by Pavlik Radim 7.1.2019
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -27,15 +28,19 @@ Created by Pavlik Radim 7.1.2019
 
 int main(int argc, char *argv[])
 {
-  int fd, j, sock_server, sock_client, size, yes = 1, nsmpl, triglvl, pretrig, rx;
+  int fd, j, sock_server, sock_client, size, yes = 1, nsmpl, rx;
   void *cfg, *dat;
   char *name = "/dev/mem";
-  int16_t TrigLvl =0, PreTrig=0;
-  //PreTrig max 15bit neznaminkove cislo?
+  int16_t TrigLvl =0;
+  uint16_t SignHelp=0;
+  uint16_t PreTrig=0; //PreTrig max 13bit unsigned number
+  
+  bool ForceTrigger_b = false;
+  bool Channel_two_b = false; //if not true then active channel is channel one(CH1)
 
   struct sockaddr_in addr;
-  uint32_t command, value, tmp;
-  uint16_t buffer[65540]; // 65536 pozic po 16 bitech (pro uint32_t 32768)
+  uint32_t command, tmp;
+  uint16_t buffer[65540]; // 65536 places, sizeof 16bit (for uint32_t 32768)
   clock_t time_begin;
   double time_spent;
   int measuring = 0;
@@ -48,8 +53,8 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
-  dat = mmap(NULL, (256*1024) , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x40000000); //podle velikosti z VIVADA 256K 
-  cfg = mmap(NULL, (4*1024) , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x42000000); //podle velikosti z VIVADA 4K 
+  dat = mmap(NULL, (256*1024) , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x40000000); //size due to VIVADO 256K 
+  cfg = mmap(NULL, (4*1024) , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x42000000); //size due to VIVADO 4K 
 
 
 
@@ -73,9 +78,10 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
-  listen(sock_server, 1024); // druhý argument = defines the maximum length to which the queue of pending connections for sockfd may grow.
+  listen(sock_server, 1024); // second argument = defines the maximum length to which the queue of pending connections for sockfd may grow.
   //add possible wait function to wait 1s to be able to see message if started via shell script
   //sleep(1);
+  printf("\nDAQ Server V1.1 is running\n");
   printf("Listening on port 1001 ...\n");
 
 
@@ -100,21 +106,31 @@ int main(int argc, char *argv[])
       if(rx > 0) 
       {
 	       //printf("--Something received:--\n");
-         value = command & 0xffffffff; //puvodne 0xfffffff
-         switch(command >> 30) // koukam na pozice [31 30] - z binarniho ramce (2 bity) //puvodne 28 - 4 bity
+         //value = command & 0xffffffff; 
+         //switch(command >> 30) // koukam na pozice [31 30] - z binarniho ramce (2 bity) //puvodne 28 - 4 bity
+         switch(command >> 29) // looking at [31 30 29] - from binary client communication frame (3 bity)
          {
             case 1:  //Trigger Level
-  				    //timing = command & 0xff; 
-  				    TrigLvl = (command & 0xffff); //(command & 0xfffe);
-  				    printf("Trigger level setup obtained %d\n", TrigLvl);
+  				    TrigLvl = (command & 0xffff); 
+              printf("Trigger level setup obtained %d\n", TrigLvl);
+
+              SignHelp = (TrigLvl & 0x8000); //select sign of 16bit integer
+              TrigLvl = TrigLvl | (SignHelp | SignHelp>>1 | SignHelp>>2); 
+              printf("Trigger level after RP conversion to 14bit %d, hex:%#010x \n", TrigLvl,TrigLvl);
+
+  				    
 				    break;
 
             case 2: //Pretrigger window
-  				    PreTrig =  (command & 0xffff); //nsamples = (command & 0xff);
+  				    //PreTrig =  (command & 0xffff); //1FFF
+              PreTrig =  (command & 0x1fff); //only 13 bits //cannot be number higher than 13bits of log.(1)
+    
+              /* //this method was used when PreTrig was intiger
               if(PreTrig < 0) //cannot be negative value
               {
                 PreTrig = 0;
               }
+              */
   				    printf("Length of Pretrigger window setup obtained %d\n",  PreTrig);
 				    break;
             
@@ -125,21 +141,30 @@ int main(int argc, char *argv[])
               StopMeasurement = 1;
             break;
 
+            case 4: //Channel Select //maybe could be better to include this into single data frame to reduce redundant almost empty frames
+             ForceTrigger_b = (command & 0x1);
+             //PickUptheChannel
+            break;
+
+            case 5: //Forced Trigger
+             Channel_two_b = (command & 0x1);
+             //ForceTheTrigger
+            break;
+
             case 0: /* fire */ // enable DAQ
-              printf("Fire-command received for %d trigger level, %d pretrigger length\n",TrigLvl,PreTrig);
-				      //set trigger and NSAMPLES set NAVERAGES and stop measurement
-				      *((int32_t *)(cfg + 0)) = (STOP) + (PreTrig<<1) + (TrigLvl<<16);
+              printf("Fire-command received for %d trigger level, %d pretrigger length\n ",TrigLvl,PreTrig); //channel ,ForceTrigger?
+				      *((int32_t *)(cfg + 0)) = (STOP) + (ForceTrigger_b<<1) + (Channel_two_b<<2) + ((PreTrig)<<3) + (TrigLvl<<16); //change this approach to add logicly
 				      //sleep(0.1); // wait 0.1 second
 				      time_begin = clock();
-				      // start measurement
               //Memory check: is data stored correctly
               //printf(" status of memory 0x42000000 %#010x before\n", (*((uint32_t *)(cfg )) & 1) );
               printf(" status of memory 0x42000000 %#010x before\n", (*((uint32_t *)(cfg )) & 0xffffffff) );
 				      printf(" Trigger Value 0x42000000 %#010x \n", (*((uint32_t *)(cfg )) & 0xffff<<16) );
               printf(" PreTrigger Value 0x42000000 %#010x \n", (*((uint32_t *)(cfg )) & 0xffff<<1) );
+              //Start measurement
               *((int32_t *)(cfg + 0)) ^= 1;
               //printf(" status of memory 0x42000000 %#010x after\n", (*((uint32_t *)(cfg )) & 1) );
-              printf(" status of memory 0x42000000 %#010x before\n", (*((uint32_t *)(cfg )) & 0xffffffff) );
+              printf(" status of memory 0x42000000 %#010x after\n", (*((uint32_t *)(cfg )) & 0xffffffff) );
 				      measuring = 1;
 				    break;
 
