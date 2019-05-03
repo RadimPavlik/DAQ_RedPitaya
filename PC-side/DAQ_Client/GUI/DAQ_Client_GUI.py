@@ -46,7 +46,7 @@ def open_file(event):
 												 title = "Choose a file."
 												)
 
-	print (name)
+	print("Chosen file: ",name)
 	UseFile = open(name,'wb')
 	FileOpened = True  
 
@@ -65,7 +65,8 @@ def handle_nonblocking_socket():
 			time_old = time_new
 			time_new = time.time()
 			recv_counter = recv_counter + 1
-			print("Time before two data blocks received : " +str(time_new - time_old) )
+			#print("Time before two data blocks received : " +str(time_new - time_old) )
+			
 			#store received data
 			UseFile.write(data)
 			RequestSend = False
@@ -85,15 +86,24 @@ def VisualizationDataPlot(dataString_to_plot):
 	global XAxis_max
 	global converted_data
 	global Persistance
+	global time_old
+	global time_new  
 
+	#get value from voltage conversion coefficient
+	V_coefficient = int(VoltageConversionCoefficient.get())
 	converted_data = numpy.fromstring(dataString_to_plot, dtype=numpy.int16)
-	#print("%d\n",converted_data)
+	print(str(time_new - time_old),";",converted_data.size )
 	if (Persistance.get() != True):	
 		PlotAxis.clear() 
-	PlotAxis.plot(converted_data)
+	converted_data = (converted_data/V_coefficient)+(int(VoltageOffset.get()))
+	casy_k_ose = numpy.arange(0,(float(TimeConversionCoefficient.get())*converted_data.size),float(TimeConversionCoefficient.get()))
+
+	PlotAxis.plot(casy_k_ose,converted_data)
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
 	PlotAxis.set_title('Received Data Visualisation')
+	PlotAxis.set_ylabel("Voltage [mV]")
+	PlotAxis.set_xlabel("Time [uS]")
 	PlotLine.draw()
 	
 	
@@ -179,17 +189,20 @@ def connect_to_rp():
 	s.connect((remote_ip, port))
 	print("Socket Connected to " + host + " using IP " + remote_ip + " by port " + str(port))
 	StatusLabel = Label(root, text = 'Online', font=("Helvetica, 16"), fg="green")	
-	StatusLabel.grid(row=0,column =4,sticky=E)	
+	StatusLabel.grid(row=0,column =3,sticky=E)	
 	
 
 def send_set_configuration():
 	global s
 	global ForcedTrigger #Forced trigger
 	global SecondChannel #CH2 selection
+
 	Trigger = int(TrigEntry.get()) # osetrit rozsah moznosti! if Trigger v intervalu jinak error a zavřit spojeni
+	TriggerLvL_converted = int(Trigger*int(VoltageConversionCoefficient.get()))
 	PreTrigger = int(PreTrigEntry.get())  #
 	
-	print("Trigger po konverzi je" + str(Trigger))
+	print("Trigger pred konverzi je" +(TrigEntry.get()))
+	print("Trigger po konverzi je" + str(TriggerLvL_converted))
 	print("PreTrigger po konverzi je" + str(PreTrigger))
 	print("ForcedTrigger je" +str(ForcedTrigger.get()))
 	print("CH2 selekce je" +str(SecondChannel.get()))
@@ -199,7 +212,7 @@ def send_set_configuration():
 	#PreTrigger = struct.pack('<h',PreTrigger)
 	#PreTriggerFlag = struct.pack('<H',2<<13) # po zmene rozsahu prikazu (3bity) nutne shift pouze o 13 => vice moznosti
 
-	Trigger = struct.pack('<h',Trigger)
+	Trigger = struct.pack('<h',TriggerLvL_converted)
 	TriggerFlag = struct.pack('<H',1<<13)
 	
 
@@ -232,7 +245,7 @@ def close_connection(event):
 	s.close()
 	print("Connection to server closed")
 	StatusLabel = Label(root, text = 'Offline', font=("Helvetica, 16"), fg="red")
-	StatusLabel.grid(row=0,column =4,sticky=E)
+	StatusLabel.grid(row=0,column =3,sticky=E)
 
 def send_measure_request():
 	global s
@@ -240,7 +253,7 @@ def send_measure_request():
 	s.send(struct.pack('<I', 0<<29))
 	#if s.send valid then : RequestSend = True
 	RequestSend = True
-	print("measure request sended")  
+	#print("measure request sended")  
 
 def continuous_measurement(force = True):
 	global MeasuringIsRunning
@@ -293,7 +306,7 @@ def Axis_update(event):
 	global PlotAxis
 	global PlotLine
 	global XAxis_max
-	PlotAxis.set_title('Received Data Visualisation')
+	#PlotAxis.set_title('Received Data Visualisation')
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
 	PlotLine.draw()
@@ -310,6 +323,9 @@ def Clear_plot(event):
 	global PlotAxis
 	global PlotLine
 	PlotAxis.clear()
+	PlotAxis.set_title('Received Data Visualisation')
+	PlotAxis.set_ylabel("Voltage [mV]")
+	PlotAxis.set_xlabel("Time [uS]")
 	PlotLine.draw()
 
 def TestValue(event):
@@ -323,11 +339,11 @@ frame= Frame(root)
 
 
 
-Label(root, text="Trigger Level (14bit int value):").grid(row=0, column=1, sticky=W, padx=5)
+Label(root, text="Trigger Level [mV]:").grid(row=0, column=1, sticky=W, padx=5)
 TrigEntry = Entry(root)
 TrigEntry.grid(row=0,column=2, sticky=E,pady=4)
 TrigEntry.delete(0,END)
-TrigEntry.insert(0, "10")
+TrigEntry.insert(0, "500")
 
 Label(root, text="PreTrigger Length (num of samples):").grid(row=1,column=1, sticky=W, padx=5)
 PreTrigEntry = Entry(root)
@@ -335,13 +351,13 @@ PreTrigEntry.grid(row=1,column=2, sticky=E,pady=4)
 PreTrigEntry.delete(0,END)
 PreTrigEntry.insert(0, "5")
 
-Label(root, text="RP IP Address:").grid(row=2,column=1, sticky=W, padx=5)
+Label(root, text="RP (IP address or hostname):").grid(row=2,column=1, sticky=W, padx=5)
 IPEntry = Entry(root)
 IPEntry.grid(row=2,column=2, sticky=E,pady=4)
 IPEntry.delete(0,END)
 IPEntry.insert(0, "10.42.0.203")
 
-Label(root, text="RP Port:").grid(row=3,column=1, sticky=W, padx=5)
+Label(root, text="RP (server port):").grid(row=3,column=1, sticky=W, padx=5)
 PortEntry = Entry(root)
 PortEntry.grid(row=3,column=2, sticky=E,pady=4)
 PortEntry.delete(0,END)
@@ -370,16 +386,18 @@ StartButton2.grid(row=7,column=1, sticky=W)
 StartButton2.bind("<Button-1>", start_measuring)
 
 StatusLabel = Label(root, text = 'Offline', font=("Helvetica, 16"), fg="red")
-StatusLabel.grid(row=0,column =4,sticky=E)
+StatusLabel.grid(row=0,column =3,sticky=E)
 
-PlotFigure = plt.Figure(figsize=(7,4), dpi =100)
+PlotFigure = plt.Figure(figsize=(7,5), dpi =100)
 PlotAxis = PlotFigure.add_subplot(111)
 PlotLine = FigureCanvasTkAgg(PlotFigure, root)
-PlotLine.get_tk_widget().grid(row=0,column=0, rowspan= 14, pady=4)
+PlotLine.get_tk_widget().grid(row=0,column=0, rowspan= 16, pady=4, padx=4)
 PlotAxis.set_title('Received Data Visualisation')
-XAxis_max = 1000
+XAxis_max = 100
 PlotAxis.axes.set_xlim(0,XAxis_max)
-PlotAxis.axes.set_ylim(-8000,8000)
+PlotAxis.axes.set_ylim(-1100,1100)
+PlotAxis.set_ylabel("Voltage [mV]")
+PlotAxis.set_xlabel('Time [uS]')
 #PlotAxis.plot([0.1,0.5,1,2,3,4,5,6,7,8])
 
 
@@ -395,19 +413,19 @@ Label(root, text="X axis step:").grid(row=8, column=1, sticky=W, padx=5)
 XosaStep = Entry(root)
 XosaStep.grid(row=8,column=2, sticky=E,pady=4)
 XosaStep.delete(0,END)
-XosaStep.insert(0, "100")
+XosaStep.insert(0, "10")
 
 Label(root, text="Y axis min:").grid(row=9, column=1, sticky=W, padx=5)
 Yosamin = Entry(root)
 Yosamin.grid(row=9,column=2, sticky=E,pady=4)
 Yosamin.delete(0,END)
-Yosamin.insert(0, "-8000")
+Yosamin.insert(0, "-1100")
 
 Label(root, text="Y axis max:").grid(row=10, column=1, sticky=W, padx=5)
 Yosamax = Entry(root)
-Yosamax.grid(row=10,column=2, sticky=E,pady=4)
+Yosamax.grid(row=10,column=2, sticky=E,pady=4,padx=4)
 Yosamax.delete(0,END)
-Yosamax.insert(0, "8000")
+Yosamax.insert(0, "1100")
 
 
 XosaminusButton = Button(root,text="Update Axis setup")
@@ -420,7 +438,7 @@ PlotClearButton.bind("<Button-1>", Clear_plot)
 
 Persistance= IntVar()
 PersistanceChButton = Checkbutton(root, text="Persistance", variable=Persistance, onvalue=True, offvalue=False)
-PersistanceChButton.grid(row=11,column=2, sticky=W)
+PersistanceChButton.grid(row=11,column=2, sticky=W, padx=4)
 
 ForcedTrigger= IntVar()
 ForcedTriggerChButton = Checkbutton(root, text="Forced Trigger", variable=ForcedTrigger, onvalue=True, offvalue=False)
@@ -430,21 +448,29 @@ SecondChannel= IntVar()
 SecondChannelChButton = Checkbutton(root, text="Second Channel (CH2)", variable=SecondChannel, onvalue=True, offvalue=False)
 SecondChannelChButton.grid(row=7,column=2, sticky=W)
 
-Label(root, text="Voltage conversion coefficient:").grid(row=13, column=1, sticky=W, padx=5)
+Label(root, text="Voltage conversion coefficient \n(14bit sign int Range/2)/1000 [mV]:").grid(row=13, column=1, sticky=W, padx=5)
 VoltageConversionCoefficient = Entry(root)
 VoltageConversionCoefficient.grid(row=13,column=2, sticky=E,pady=4)
 VoltageConversionCoefficient.delete(0,END)
 VoltageConversionCoefficient.insert(0, "8")
 
-Label(root, text="Time conversion coefficient:").grid(row=14, column=1, sticky=W, padx=5)
+
+Label(root, text="Voltage Y-Axis offset +/- [mV] :").grid(row=14, column=1, sticky=W, padx=5)
+VoltageOffset = Entry(root)
+VoltageOffset.grid(row=14,column=2, sticky=E,pady=4)
+VoltageOffset.delete(0,END)
+VoltageOffset.insert(0, "0")
+
+Label(root, text="Time conversion coefficient\n (1/RP_samplFreq)*100 [uS]:").grid(row=15, column=1, sticky=W, padx=5)
 TimeConversionCoefficient = Entry(root)
-TimeConversionCoefficient.grid(row=14,column=2, sticky=E,pady=4)
+TimeConversionCoefficient.grid(row=15,column=2, sticky=E,pady=4)
 TimeConversionCoefficient.delete(0,END)
 TimeConversionCoefficient.insert(0, "0.008")
 
 TestButton = Button(root,text="TestButton")
-TestButton.grid(row=15, column=1, sticky=W)
+TestButton.grid(row=16, column=1, sticky=W)
 TestButton.bind("<Button-1>", TestValue)
 
 
 root.mainloop()
+C
