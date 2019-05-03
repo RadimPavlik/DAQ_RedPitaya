@@ -179,35 +179,42 @@ def connect_to_rp():
 	s.connect((remote_ip, port))
 	print("Socket Connected to " + host + " using IP " + remote_ip + " by port " + str(port))
 	StatusLabel = Label(root, text = 'Online', font=("Helvetica, 16"), fg="green")	
-	StatusLabel.grid(row=0,column =3,sticky=E)	
+	StatusLabel.grid(row=0,column =4,sticky=E)	
 	
 
 def send_set_configuration():
 	global s
+	global ForcedTrigger #Forced trigger
+	global SecondChannel #CH2 selection
 	Trigger = int(TrigEntry.get()) # osetrit rozsah moznosti! if Trigger v intervalu jinak error a zavřit spojeni
 	PreTrigger = int(PreTrigEntry.get())  #
 	
 	print("Trigger po konverzi je" + str(Trigger))
 	print("PreTrigger po konverzi je" + str(PreTrigger))
+	print("ForcedTrigger je" +str(ForcedTrigger.get()))
+	print("CH2 selekce je" +str(SecondChannel.get()))
 	
-	#print(struct.pack('<I', 1<<30 | Trigger))
+	#print(struct.pack('<I', 1<<29 | Trigger)) #Varianta pro unsigned int
 
-	PreTrigger = struct.pack('<h',PreTrigger)
-	PreTriggerFlag = struct.pack('<H',2<<14) 
+	#PreTrigger = struct.pack('<h',PreTrigger)
+	#PreTriggerFlag = struct.pack('<H',2<<13) # po zmene rozsahu prikazu (3bity) nutne shift pouze o 13 => vice moznosti
 
 	Trigger = struct.pack('<h',Trigger)
-	TriggerFlag = struct.pack('<H',1<<14)
+	TriggerFlag = struct.pack('<H',1<<13)
 	
 
-	PreTrig= b"".join([PreTrigger, PreTriggerFlag])
-	Trig = b"".join([Trigger, TriggerFlag])
+	#PreTrig= b"".join([PreTrigger, PreTriggerFlag]) #Vysledek 32bit cislo pro signed int
+	Trig = b"".join([Trigger, TriggerFlag])          #Vysledek 32bit cislo = index ramce a 16bit sign hodnota 
 	
 	#vytisknout
-	print(Trig)
+	#print(Trig)
 	#print(PreTriggerFlag)
 
-	s.send(PreTrig) #
-	s.send(Trig) #
+	s.send(struct.pack('<I', 2<<29 | PreTrigger)) # pro unsigned int
+	s.send(Trig) # slozena signed int varianta
+	s.send(struct.pack('<I', 4<<29 | int(SecondChannel.get())))
+	s.send(struct.pack('<I', 5<<29 | int(ForcedTrigger.get())))
+		
 	
 	print("Configuration sended to RP server")
 
@@ -215,7 +222,7 @@ def close_connection(event):
 	global s
 	global StatusLabel
 
-	s.send(struct.pack('<I', 3<<30))
+	s.send(struct.pack('<I', 3<<29))
 	print("Zaviram spojeni:")
 	print(s)
 	SocketCreated = False # test
@@ -225,12 +232,12 @@ def close_connection(event):
 	s.close()
 	print("Connection to server closed")
 	StatusLabel = Label(root, text = 'Offline', font=("Helvetica, 16"), fg="red")
-	StatusLabel.grid(row=0,column =3,sticky=E)
+	StatusLabel.grid(row=0,column =4,sticky=E)
 
 def send_measure_request():
 	global s
 	global RequestSend
-	s.send(struct.pack('<I', 0<<30))
+	s.send(struct.pack('<I', 0<<29))
 	#if s.send valid then : RequestSend = True
 	RequestSend = True
 	print("measure request sended")  
@@ -314,25 +321,27 @@ root.title("DAQ-client-app")
 
 frame= Frame(root)
 
-Label(root, text="Trigger Level (14bit int value):").grid(row=0, column=1, sticky=W, padx=4)
+
+
+Label(root, text="Trigger Level (14bit int value):").grid(row=0, column=1, sticky=W, padx=5)
 TrigEntry = Entry(root)
 TrigEntry.grid(row=0,column=2, sticky=E,pady=4)
 TrigEntry.delete(0,END)
 TrigEntry.insert(0, "10")
 
-Label(root, text="PreTrigger Length (num of samples):").grid(row=1,column=1, sticky=W, padx=4)
+Label(root, text="PreTrigger Length (num of samples):").grid(row=1,column=1, sticky=W, padx=5)
 PreTrigEntry = Entry(root)
 PreTrigEntry.grid(row=1,column=2, sticky=E,pady=4)
 PreTrigEntry.delete(0,END)
 PreTrigEntry.insert(0, "5")
 
-Label(root, text="RP IP Address:").grid(row=2,column=1, sticky=W, padx=4)
+Label(root, text="RP IP Address:").grid(row=2,column=1, sticky=W, padx=5)
 IPEntry = Entry(root)
 IPEntry.grid(row=2,column=2, sticky=E,pady=4)
 IPEntry.delete(0,END)
 IPEntry.insert(0, "10.42.0.203")
 
-Label(root, text="RP Port:").grid(row=3,column=1, sticky=W, padx=4)
+Label(root, text="RP Port:").grid(row=3,column=1, sticky=W, padx=5)
 PortEntry = Entry(root)
 PortEntry.grid(row=3,column=2, sticky=E,pady=4)
 PortEntry.delete(0,END)
@@ -361,12 +370,12 @@ StartButton2.grid(row=7,column=1, sticky=W)
 StartButton2.bind("<Button-1>", start_measuring)
 
 StatusLabel = Label(root, text = 'Offline', font=("Helvetica, 16"), fg="red")
-StatusLabel.grid(row=0,column =3,sticky=E)
+StatusLabel.grid(row=0,column =4,sticky=E)
 
-PlotFigure = plt.Figure(figsize=(8,4), dpi =100)
+PlotFigure = plt.Figure(figsize=(7,4), dpi =100)
 PlotAxis = PlotFigure.add_subplot(111)
 PlotLine = FigureCanvasTkAgg(PlotFigure, root)
-PlotLine.get_tk_widget().grid(row=5,column=0)
+PlotLine.get_tk_widget().grid(row=0,column=0, rowspan= 14, pady=4)
 PlotAxis.set_title('Received Data Visualisation')
 XAxis_max = 1000
 PlotAxis.axes.set_xlim(0,XAxis_max)
@@ -375,28 +384,28 @@ PlotAxis.axes.set_ylim(-8000,8000)
 
 
 XosaplusButton = Button(root,text="X axis+")
-XosaplusButton.grid(row=8, column= 1, sticky=W)
+XosaplusButton.grid(row=8, column= 3, sticky=W)
 XosaplusButton.bind("<Button-1>", X_axis_increment)
 
 XosaminusButton = Button(root,text="X axis-")
-XosaminusButton.grid(row=8, column= 2, sticky=W)
+XosaminusButton.grid(row=8, column= 4, sticky=W)
 XosaminusButton.bind("<Button-1>", X_axis_decrement)
 
-Label(root, text="X axis step:").grid(row=8, column=3, sticky=W, padx=4)
+Label(root, text="X axis step:").grid(row=8, column=1, sticky=W, padx=5)
 XosaStep = Entry(root)
-XosaStep.grid(row=8,column=4, sticky=E,pady=2)
+XosaStep.grid(row=8,column=2, sticky=E,pady=4)
 XosaStep.delete(0,END)
 XosaStep.insert(0, "100")
 
-Label(root, text="Y axis min:").grid(row=9, column=1, sticky=W, padx=4)
+Label(root, text="Y axis min:").grid(row=9, column=1, sticky=W, padx=5)
 Yosamin = Entry(root)
-Yosamin.grid(row=9,column=2, sticky=E,pady=2)
+Yosamin.grid(row=9,column=2, sticky=E,pady=4)
 Yosamin.delete(0,END)
 Yosamin.insert(0, "-8000")
 
-Label(root, text="Y axis max:").grid(row=10, column=1, sticky=W, padx=4)
+Label(root, text="Y axis max:").grid(row=10, column=1, sticky=W, padx=5)
 Yosamax = Entry(root)
-Yosamax.grid(row=10,column=2, sticky=E,pady=2)
+Yosamax.grid(row=10,column=2, sticky=E,pady=4)
 Yosamax.delete(0,END)
 Yosamax.insert(0, "8000")
 
@@ -411,10 +420,31 @@ PlotClearButton.bind("<Button-1>", Clear_plot)
 
 Persistance= IntVar()
 PersistanceChButton = Checkbutton(root, text="Persistance", variable=Persistance, onvalue=True, offvalue=False)
-PersistanceChButton.grid(row=12,column=2, sticky=W)
+PersistanceChButton.grid(row=11,column=2, sticky=W)
+
+ForcedTrigger= IntVar()
+ForcedTriggerChButton = Checkbutton(root, text="Forced Trigger", variable=ForcedTrigger, onvalue=True, offvalue=False)
+ForcedTriggerChButton.grid(row=6,column=2, sticky=W)
+
+SecondChannel= IntVar()
+SecondChannelChButton = Checkbutton(root, text="Second Channel (CH2)", variable=SecondChannel, onvalue=True, offvalue=False)
+SecondChannelChButton.grid(row=7,column=2, sticky=W)
+
+Label(root, text="Voltage conversion coefficient:").grid(row=13, column=1, sticky=W, padx=5)
+VoltageConversionCoefficient = Entry(root)
+VoltageConversionCoefficient.grid(row=13,column=2, sticky=E,pady=4)
+VoltageConversionCoefficient.delete(0,END)
+VoltageConversionCoefficient.insert(0, "8")
+
+Label(root, text="Time conversion coefficient:").grid(row=14, column=1, sticky=W, padx=5)
+TimeConversionCoefficient = Entry(root)
+TimeConversionCoefficient.grid(row=14,column=2, sticky=E,pady=4)
+TimeConversionCoefficient.delete(0,END)
+TimeConversionCoefficient.insert(0, "0.008")
 
 TestButton = Button(root,text="TestButton")
-TestButton.grid(row=13, column=1, sticky=W)
+TestButton.grid(row=15, column=1, sticky=W)
 TestButton.bind("<Button-1>", TestValue)
+
 
 root.mainloop()
