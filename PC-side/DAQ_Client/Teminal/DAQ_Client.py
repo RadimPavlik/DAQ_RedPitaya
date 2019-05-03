@@ -59,15 +59,15 @@ def Setup():
 	s.send(Trig)
 
 	s.send(struct.pack('<I', 2<<29 | PreTrigger ))   # number of samples
-	s.send(struct.pack('<I', 4<<29 | ForcedTrigger)) # if there is necessary to manualy trigger event
-	s.send(struct.pack('<I', 5<<29 | ChannelSelect )) # select the channel
+	s.send(struct.pack('<I', 5<<29 | ForcedTrigger)) # if there is necessary to manualy trigger event
+	s.send(struct.pack('<I', 4<<29 | ChannelSelect )) # select the channel
 	
 
 def Request():
 	global requested
 	if (requested == False):
 		s.send(struct.pack('<I', 0<<30))
-		print("Request Send")
+		#print("Request Send")
 		requested= True
 	
 def Receive():
@@ -98,13 +98,8 @@ def Receive():
 		if( probehlo_akvizic >= 100 ):			
 			probehlo_akvizic = 0
 			hodnoty = numpy.fromstring(data, dtype=numpy.int16)
-			print(hodnoty)
 			hodnoty = (hodnoty/VoltageConversionCoefficient) + VoltagePlotOffset_mV # rescale and offset of received values
-			print("Pocet hodnot prijatych",hodnoty.size)
 			casy_x = numpy.arange(0,(TimeConversionCoefficient*hodnoty.size),TimeConversionCoefficient)
-			#numpy.insert(casy_x,0)
-			print("Pocet casu generovanych prijatych",casy_x.size)
-			print(casy_x)
 			#tisk hodnoty/v grafu
 			plt.plot(casy_x,hodnoty)
 			xmin=0
@@ -116,8 +111,9 @@ def Receive():
 			plt.ylabel('Voltage [mV]')
 			plt.xlabel('Time [uS]')
 			plt.show()
-			print("Time before two data blocks received : " +str(time_new - time_old) )
-			print("END")
+			#print("Time before two data blocks received : " +str(time_new - time_old) )
+			print(str(time_new - time_old),";",hodnoty.size )
+			#print("END")
 			
 
 Setup()
