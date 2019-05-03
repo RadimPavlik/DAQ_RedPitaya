@@ -141,13 +141,13 @@ int main(int argc, char *argv[])
               StopMeasurement = 1;
             break;
 
-            case 4: //Channel Select //maybe could be better to include this into single data frame to reduce redundant almost empty frames
-             ForceTrigger_b = (command & 0x1);
+            case 4: //Channel Select //maybe could be better to include this into single data frame to reduce redundant almost empty frames 
+             Channel_two_b = (command & 0x1);
              //PickUptheChannel
             break;
 
             case 5: //Forced Trigger
-             Channel_two_b = (command & 0x1);
+             ForceTrigger_b = (command & 0x1);
              //ForceTheTrigger
             break;
 
