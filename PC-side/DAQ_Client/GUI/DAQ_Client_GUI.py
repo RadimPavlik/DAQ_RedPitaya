@@ -72,7 +72,11 @@ def handle_nonblocking_socket():
 			RequestSend = False
 			if (recv_counter >= draw_graph_every_X_rep):
 				recv_counter = 0
-				VisualizationDataPlot(data)
+				if(int(Draw_plot.get())): # Draw only if allowed
+					VisualizationDataPlot(data)
+				else:
+
+					print(str(time_new - time_old),";",sys.getsizeof(data) )
 
 		else:
 			print("0-bytes received")
@@ -93,12 +97,24 @@ def VisualizationDataPlot(dataString_to_plot):
 	V_coefficient = int(VoltageConversionCoefficient.get())
 	converted_data = numpy.fromstring(dataString_to_plot, dtype=numpy.int16)
 	print(str(time_new - time_old),";",converted_data.size )
+
 	if (Persistance.get() != True):	
 		PlotAxis.clear() 
+	
 	converted_data = (converted_data/V_coefficient)+(int(VoltageOffset.get()))
-	casy_k_ose = numpy.arange(0,(float(TimeConversionCoefficient.get())*converted_data.size),float(TimeConversionCoefficient.get()))
+	#get value from time conversion coefficient
+	T_coefficient = float(TimeConversionCoefficient.get())
+	axis_stop_limit = T_coefficient*converted_data.size
+	axis_elements = axis_stop_limit/T_coefficient
 
-	PlotAxis.plot(casy_k_ose,converted_data)
+	if (axis_elements > float(converted_data.size)): # solves the rounding issue and following non-symetrical array
+	    axis_stop_limit = axis_stop_limit-(T_coefficient/2)
+	#elif (axis_elements < converted_data.size):
+	#	axis_stop_limit = axis_stop_limit+T_coefficient/2)
+
+	times_array_for_axis = numpy.arange(0,axis_stop_limit,T_coefficient)
+
+	PlotAxis.plot(times_array_for_axis,converted_data)
 	PlotAxis.axes.set_xlim(0,XAxis_max)
 	PlotAxis.axes.set_ylim(int(Yosamin.get()),int(Yosamax.get()))
 	PlotAxis.set_title('Received Data Visualisation')
@@ -328,9 +344,6 @@ def Clear_plot(event):
 	PlotAxis.set_xlabel("Time [uS]")
 	PlotLine.draw()
 
-def TestValue(event):
-	global Persistance
-	print(Persistance.get())
 
 root = Tk() #main window
 root.title("DAQ-client-app")
@@ -440,6 +453,10 @@ Persistance= IntVar()
 PersistanceChButton = Checkbutton(root, text="Persistance", variable=Persistance, onvalue=True, offvalue=False)
 PersistanceChButton.grid(row=11,column=2, sticky=W, padx=4)
 
+Draw_plot= IntVar()
+Draw_plotChButton = Checkbutton(root, text="Draw plot", variable=Draw_plot, onvalue=True, offvalue=False)
+Draw_plotChButton.grid(row=12,column=2, sticky=W, padx=4)
+
 ForcedTrigger= IntVar()
 ForcedTriggerChButton = Checkbutton(root, text="Forced Trigger", variable=ForcedTrigger, onvalue=True, offvalue=False)
 ForcedTriggerChButton.grid(row=6,column=2, sticky=W)
@@ -467,10 +484,6 @@ TimeConversionCoefficient.grid(row=15,column=2, sticky=E,pady=4)
 TimeConversionCoefficient.delete(0,END)
 TimeConversionCoefficient.insert(0, "0.008")
 
-TestButton = Button(root,text="TestButton")
-TestButton.grid(row=16, column=1, sticky=W)
-TestButton.bind("<Button-1>", TestValue)
 
 
 root.mainloop()
-C
