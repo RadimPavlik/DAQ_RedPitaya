@@ -26,6 +26,35 @@ Created by Pavlik Radim 7.1.2019
 
 #define N_SAMPLES 65536
 
+// Command frames structure from client app:
+//FRAME: [31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0]
+#define COMMAND_INDEX_OFFSET 29  //Available bits: [31 30 29] = 8 frame types
+
+#define COMMAND_INDEX_TYPE_START = 0
+#define COMMAND_INDEX_TYPE_STOP = 3
+#define COMMAND_INDEX_TYPE_TRIGGER_LVL = 1
+#define COMMAND_INDEX_TYPE_PRETRIGGER_VAL = 2
+#define COMMAND_INDEX_TYPE_CHANNEL_SELECT = 4
+#define COMMAND_INDEX_TYPE_FORCE_TRIGGER = 5
+//2-more left => decimation,...
+
+#define COMMAND_TRIGGER_LVL_RANGE 0xffff    //[16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0]
+#define COMMAND_TRIGGER_LVL_SIGN_BIT 0x8000 //[16]
+#define COMMAND_PRETRIGGER_VAL_RANGE 0x1fff //[13 12 11 10 9 8 7 6 5 4 3 2 1 0]
+#define COMMAND_FORCE_TRIGGER_RANGE 0x1     //[0]
+#define COMMAND_CHANNEL_SELECT_RANGE 0x1    //[0]
+
+// Buffer structure on RP side:
+//________|S__S__S___TRIGGER_LVL(int)___________________|_______PRETRIGGER_VAL(uint)_______|_.............|
+//BUFFER: [31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 | 16 15 14 13 12 11 10 9 8 7 6 5 4 | 3 | 2 | 1 | 0]
+#define RP_BUFFER_MEASURING_START_OFFSET 0
+#define RP_BUFFER_FORCE_TRIGGER_OFFSET 1
+#define RP_BUFFER_CHANNEL_SELECT_OFFSET 2
+#define RP_BUFFER_PRETRIGGER_VAL_OFFSET 3
+#define RP_BUFFER_TRIGGER_LVL_OFFSET 16
+
+
+
 int main(int argc, char *argv[])
 {
   int fd, j, sock_server, sock_client, size, yes = 1, nsmpl, rx;
@@ -53,8 +82,8 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
-  dat = mmap(NULL, (256*1024) , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x40000000); //size due to VIVADO 256K 
-  cfg = mmap(NULL, (4*1024) , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x42000000); //size due to VIVADO 4K 
+  dat = mmap(NULL, (256*1024) , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x40000000); //size due to VIVADO 256K //RP Data Register 
+  cfg = mmap(NULL, (4*1024) , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x42000000); //size due to VIVADO 4K //RP Config Register
 
 
 
@@ -87,7 +116,7 @@ int main(int argc, char *argv[])
 
   while(1)
   {
-    printf("--Inside Infinite Loop!--\n");
+    printf("--Waiting for connection!--\n"); 
     if((sock_client = accept(sock_server, NULL, NULL)) < 0)
     {  
 	   perror("accept");
@@ -106,24 +135,21 @@ int main(int argc, char *argv[])
       if(rx > 0) 
       {
 	       //printf("--Something received:--\n");
-         //value = command & 0xffffffff; 
-         //switch(command >> 30) // koukam na pozice [31 30] - z binarniho ramce (2 bity) //puvodne 28 - 4 bity
-         switch(command >> 29) // looking at [31 30 29] - from binary client communication frame (3 bity)
+         switch(command >> COMMAND_INDEX_OFFSET) // looking at [31 30 29] - from binary client communication frame (3 bity)
          {
-            case 1:  //Trigger Level
-  				    TrigLvl = (command & 0xffff); 
-              printf("Trigger level setup obtained %d\n", TrigLvl);
+            case COMMAND_INDEX_TYPE_TRIGGER_LVL:  //Trigger Level
+  				    TrigLvl = (command & COMMAND_TRIGGER_LVL_RANGE); 
+              printf("Trigger level setup obtained: %d\n", TrigLvl);
 
-              SignHelp = (TrigLvl & 0x8000); //select sign of 16bit integer
-              TrigLvl = TrigLvl | (SignHelp | SignHelp>>1 | SignHelp>>2); 
-              printf("Trigger level after RP conversion to 14bit %d, hex:%#010x \n", TrigLvl,TrigLvl);
+              SignHelp = (TrigLvl & COMMAND_TRIGGER_LVL_SIGN_BIT); //select sign of 16bit integer 
+              TrigLvl = TrigLvl | (SignHelp | SignHelp>>1 | SignHelp>>2); //Padding of sign mark to 3 higest bits => due to vivado design logic ([S S S][DATA_14b])
+              //printf("Trigger level after RP conversion to 14bit %d, hex:%#010x \n", TrigLvl,TrigLvl);
 
   				    
 				    break;
 
-            case 2: //Pretrigger window
-  				    //PreTrig =  (command & 0xffff); //1FFF
-              PreTrig =  (command & 0x1fff); //only 13 bits //cannot be number higher than 13bits of log.(1)
+            case COMMAND_INDEX_TYPE_PRETRIGGER_VAL: //Pretrigger window
+              PreTrig =  (command & COMMAND_PRETRIGGER_VAL_RANGE); //only 13 bits //cannot be number higher than 13bits of log.(1)
     
               /* //this method was used when PreTrig was intiger
               if(PreTrig < 0) //cannot be negative value
@@ -131,45 +157,54 @@ int main(int argc, char *argv[])
                 PreTrig = 0;
               }
               */
-  				    printf("Length of Pretrigger window setup obtained %d\n",  PreTrig);
+  				    printf("Length of Pretrigger window setup obtained: %d\n",  PreTrig);
 				    break;
             
-            case 3: //STOP MEASURING
+            case COMMAND_INDEX_TYPE_STOP: //STOP MEASURING
               printf("Measurement Stop command received\n");
               //set StopMeasurement to true
               measuring = 0;
               StopMeasurement = 1;
             break;
 
-            case 4: //Channel Select //maybe could be better to include this into single data frame to reduce redundant almost empty frames 
-             Channel_two_b = (command & 0x1);
+            case COMMAND_INDEX_TYPE_CHANNEL_SELECT: //Channel Select //maybe could be better to include this into single data frame to reduce redundant almost empty frames 
+             Channel_two_b = (command & COMMAND_CHANNEL_SELECT_RANGE);
+             if(Channel_two_b)
+             {
+               printf("Channel 2 selected\n");
+             }
+             else printf("Channel 1 selected\n");
+             
              //PickUptheChannel
             break;
 
-            case 5: //Forced Trigger
-             ForceTrigger_b = (command & 0x1);
-             //ForceTheTrigger
+            case COMMAND_INDEX_TYPE_FORCE_TRIGGER: //Forced Trigger
+             ForceTrigger_b = (command & COMMAND_FORCE_TRIGGER_RANGE);
+             if(ForceTrigger_b)
+             {
+               printf("Forced trigger ON\n");
+             }
+             else printf("Forced trigger OFF\n");
             break;
 
-            case 0: /* fire */ // enable DAQ
-              printf("Fire-command received for %d trigger level, %d pretrigger length\n ",TrigLvl,PreTrig); //channel ,ForceTrigger?
-				      *((int32_t *)(cfg + 0)) = (STOP) + (ForceTrigger_b<<1) + (Channel_two_b<<2) + ((PreTrig)<<3) + (TrigLvl<<16); //change this approach to add logicly
-				      //sleep(0.1); // wait 0.1 second
-				      time_begin = clock();
+            case COMMAND_INDEX_TYPE_START: /* fire */ // enable DAQ
+              //printf("Fire-command received for %d trigger level, %d pretrigger length\n ",TrigLvl,PreTrig); 
+				      *((int32_t *)(cfg + 0)) = (STOP) + (ForceTrigger_b << RP_BUFFER_FORCE_TRIGGER_OFFSET) + (Channel_two_b << RP_BUFFER_CHANNEL_SELECT_OFFSET) + ((PreTrig) << RP_BUFFER_PRETRIGGER_VAL_OFFSET) + (TrigLvl << RP_BUFFER_TRIGGER_LVL_OFFSET); 
+				      //time_begin = clock(); // Uncomment if wanted to measure time between acqusitions on RP-platform
               //Memory check: is data stored correctly
-              //printf(" status of memory 0x42000000 %#010x before\n", (*((uint32_t *)(cfg )) & 1) );
+              /*
               printf(" status of memory 0x42000000 %#010x before\n", (*((uint32_t *)(cfg )) & 0xffffffff) );
 				      printf(" Trigger Value 0x42000000 %#010x \n", (*((uint32_t *)(cfg )) & 0xffff<<16) );
               printf(" PreTrigger Value 0x42000000 %#010x \n", (*((uint32_t *)(cfg )) & 0xffff<<1) );
+              */
               //Start measurement
-              *((int32_t *)(cfg + 0)) ^= 1;
-              //printf(" status of memory 0x42000000 %#010x after\n", (*((uint32_t *)(cfg )) & 1) );
-              printf(" status of memory 0x42000000 %#010x after\n", (*((uint32_t *)(cfg )) & 0xffffffff) );
+              *((int32_t *)(cfg + 0)) ^= 1; //invert RP_BUFFER_MEASURING_START_OFFSET bit => measuring initiated
+              //printf(" status of memory 0x42000000 %#010x after\n", (*((uint32_t *)(cfg )) & 0xffffffff) );
 				      measuring = 1;
 				    break;
 
 			      default: //nothing
-				      printf("This should not happen!\n");
+				      printf("This should not happen! Check the offset/range of frame indexes in client app or endianity\n");
 				    break;
          }
       }
@@ -184,21 +219,20 @@ int main(int argc, char *argv[])
       if (measuring == 1 && ((*((uint32_t *)(cfg + 8)) & 1) != 0) ) //checking adress GPIO2 0x42000008 if measurement completed. ? looking for 1 
       { 
         //printf("Measuring finished \n");
-      	time_spent = ((double)(clock() - time_begin)) / CLOCKS_PER_SEC; // measure time
-	
+      	//time_spent = ((double)(clock() - time_begin)) / CLOCKS_PER_SEC; // measure time // Uncomment if wanted to measure time between acqusitions on RP-platform
         send(sock_client, dat, 2*N_SAMPLES, MSG_NOSIGNAL); //send data via reference/adress to dat- mapped space
         //test if send not valid then break?
 
-      	printf("%d samples measured in %f s\n", N_SAMPLES, time_spent);
+      	//printf("%d samples measured in %f s\n", N_SAMPLES, time_spent); // Uncomment if wanted to measure time between acqusitions on RP-platform
 		    measuring = 0;
-		    //break; //zakomentovano at neukoncuje spojeni po jedne akvizici
+		    //break; //Commented in oreder to stop terminating connection after single acqisiton.
       }
     }	
-    printf("Socket Client Closed1\n");
+    //printf("Socket Client Closed1\n");
     close(sock_client);
    
   }
-  printf("Socket Server Closed2\n");
+  //printf("Socket Server Closed2\n");
   close(sock_server);
   return EXIT_SUCCESS;
 }
