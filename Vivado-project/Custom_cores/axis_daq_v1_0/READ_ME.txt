@@ -6,6 +6,5 @@
 # to "../redpitaya_guide/cores/"
 #3)Follow the instructions from website Project 5 – High-Bandwidth Averager ("http://antonpotocnik.com/?p=514765") and generate 5_averager project.
 # Do not forget to modify "make_project.tcl" file!!
-#4)In this step all the project cores should be allready sucessfuly generated. That was done via command "source make_cores.tcl" inside Vivado (path "R
-../redpitaya_guide" basically where "make_cores.tcl" file is)
+#4)In this step all the project cores should be allready sucessfuly generated. That was done via command "source make_cores.tcl" inside Vivado (path "../redpitaya_guide" basically where "make_cores.tcl" file is located)
 #5)Open the newly generated project in Vivado and replace "Averager core" with now accessible "DAQ core".
