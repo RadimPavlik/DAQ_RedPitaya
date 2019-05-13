@@ -22,7 +22,7 @@ atexit.register(exit_handler)
 
 TCP_IP = '10.42.0.203' #'169.254.233.198'  #'169.254.233.198' #'127.0.0.1' 
 TCP_PORT = 1001
-BUFFER_SIZE = 65536
+BUFFER_SIZE = 65536*2
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((TCP_IP, TCP_PORT))
@@ -30,8 +30,8 @@ s.connect((TCP_IP, TCP_PORT))
 time_old = 0
 time_new = 0
 
-probehlo_akvizic = 0
-hodnoty = array.array('i')
+completed_receives = 0
+values = array.array('i')
 
 requested = False
  
@@ -74,8 +74,8 @@ def Receive():
 	global time_old
 	global time_new
 	global requested
-	global probehlo_akvizic
-	global hodnoty
+	global completed_receives
+	global values
 	global VoltageConversionCoefficient
 	global VoltagePlotOffset_mV
 	global TimeConversionCoefficient
@@ -88,20 +88,18 @@ def Receive():
 	elif (data > bytes(0)):
 		requested = False
 		#print(data)
-		#ukladej data pro potrebu grafu
-		probehlo_akvizic = probehlo_akvizic+1
-		#print(hodnoty)
+		completed_receives = completed_receives+1
+		#print(values)
 		#data = numpy.array(data, 'i')
 		time_old = time_new
 		time_new = time.time()
-		#pro kazde 100 mereni
-		if( probehlo_akvizic >= 100 ):			
-			probehlo_akvizic = 0
-			hodnoty = numpy.fromstring(data, dtype=numpy.int16)
-			hodnoty = (hodnoty/VoltageConversionCoefficient) + VoltagePlotOffset_mV # rescale and offset of received values
-			casy_x = numpy.arange(0,(TimeConversionCoefficient*hodnoty.size),TimeConversionCoefficient)
-			#tisk hodnoty/v grafu
-			plt.plot(casy_x,hodnoty)
+		#every 100th measurement:
+		if( completed_receives >= 100 ):			
+			completed_receives = 0
+			values = numpy.fromstring(data, dtype=numpy.int16)
+			values = (values/VoltageConversionCoefficient) + VoltagePlotOffset_mV # rescale and offset of received values
+			casy_x = numpy.arange(0,(TimeConversionCoefficient*values.size),TimeConversionCoefficient)
+			plt.plot(casy_x,values)
 			xmin=0
 			xmax=10 #uS
 			ymin=-1000 #mV
@@ -112,20 +110,16 @@ def Receive():
 			plt.xlabel('Time [uS]')
 			plt.show()
 			#print("Time before two data blocks received : " +str(time_new - time_old) )
-			print(str(time_new - time_old),";",hodnoty.size )
+			print(str(time_new - time_old),";",values.size )
 			#print("END")
 			
 
 Setup()
 
 while True:
-	#Setup() # neni nutne volat opakovane pokud se parametry nemeni
+	#Setup() # not necessary to call repeatedly if setup did not changed.
 	Request()
 	Receive()
-
-	#time.sleep(0.0001)
-	#time.sleep(1)
-
 s.close()
 
 
