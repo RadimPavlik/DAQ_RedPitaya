@@ -478,7 +478,7 @@ VoltageOffset.grid(row=14,column=2, sticky=E,pady=4)
 VoltageOffset.delete(0,END)
 VoltageOffset.insert(0, "0")
 
-Label(root, text="Time conversion coefficient\n (1/RP_samplFreq)*100 [uS]:").grid(row=15, column=1, sticky=W, padx=5)
+Label(root, text="Time conversion coefficient\n (1/RP_samplFreq) [uS]:").grid(row=15, column=1, sticky=W, padx=5)
 TimeConversionCoefficient = Entry(root)
 TimeConversionCoefficient.grid(row=15,column=2, sticky=E,pady=4)
 TimeConversionCoefficient.delete(0,END)
